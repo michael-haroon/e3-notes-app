@@ -5,6 +5,7 @@ import Link from "next/link";
 import { deleteNote } from "@/actions/notes";
 import { useRouter } from "next/navigation";
 import { Visibility } from "@/generated/prisma";
+import { FileUploader } from "@/components/notes/FileUploader";
 
 type Note = {
   id: string;
@@ -259,28 +260,10 @@ export function NoteDetail({
           )}
 
           {/* Files */}
-          {note.files.length > 0 && (
-            <div className="mt-6">
-              <h3 className="font-semibold mb-3">Attachments</h3>
-              <div className="space-y-2">
-                {note.files.map((file) => (
-                  <a
-                    key={file.id}
-                    href={`/api/files/${file.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 bg-gray-50 border rounded-lg hover:bg-gray-100 text-sm"
-                  >
-                    <span className="text-gray-500">📎</span>
-                    <span>{file.filename}</span>
-                    <span className="text-gray-400 ml-auto">
-                      {(file.size / 1024).toFixed(1)} KB
-                    </span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="mt-6">
+            <h3 className="font-semibold mb-3">Attachments</h3>
+            <FileUploader noteId={note.id} />
+          </div>
         </div>
       </main>
     </div>
