@@ -17,7 +17,7 @@ type Note = {
   updatedAt: Date;
   author: { id: string; name: string | null; email: string };
   tags: { tag: { id: string; name: string } }[];
-  versions: { id: string; version: number; createdAt: Date }[];
+  versions: { id: string; version: number; createdAt: Date; author?: { name: string | null; email: string } }[];
   files: { id: string; filename: string; mimeType: string; size: number }[];
   aiSummaries: { id: string; content: string; accepted: boolean; createdAt: Date }[];
 };
@@ -228,6 +228,33 @@ export function NoteDetail({
                   return <p className="text-sm text-gray-700">{latestSummary.content}</p>;
                 }
               })()}
+            </div>
+          )}
+
+          {/* Version History Panel */}
+          {note.versions.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Recent Changes</h3>
+                <Link href={`/notes/${note.id}/versions`} className="text-xs text-blue-600 hover:underline">
+                  View all {note.versions.length} versions →
+                </Link>
+              </div>
+              <div className="space-y-2">
+                {note.versions.slice(0, 3).map((v) => (
+                  <div key={v.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">v{v.version}</span>
+                      <span className="text-gray-500 text-xs">
+                        {v.author ? (v.author.name ?? v.author.email) : "Unknown"}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {new Date(v.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

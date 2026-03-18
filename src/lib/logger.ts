@@ -31,4 +31,10 @@ export type LogAction =
   | "ai.summarize"
   | "ai.accept"
   | "ai.permission_denied"
-  | "search.query";
+  | "search.query"
+  | "tag.create"
+  | "tag.delete"
+  | "note.share"
+  | "note.unshare"
+  | "note.restore"
+  | "file.delete";

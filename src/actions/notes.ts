@@ -199,6 +199,79 @@ export async function deleteNote(noteId: string) {
   return { success: true };
 }
 
+export async function shareNote(noteId: string, shareWithUserId: string) {
+  const { user, orgId } = await getSession();
+
+  const note = await db.note.findUnique({ where: { id: noteId } });
+  if (!note) throw new Error("Note not found");
+  if (note.authorId !== user.id) throw new Error("Only the author can share this note");
+  if (note.orgId !== orgId) throw new Error("Note belongs to a different org");
+
+  // Verify shareWithUserId is a member of the same org
+  const targetMembership = await db.orgMember.findUnique({
+    where: { orgId_userId: { orgId: note.orgId, userId: shareWithUserId } },
+  });
+  if (!targetMembership) throw new Error("User is not a member of this org");
+
+  await db.noteShare.upsert({
+    where: { noteId_userId: { noteId, userId: shareWithUserId } },
+    create: { noteId, userId: shareWithUserId },
+    update: {},
+  });
+
+  await writeAuditLog({
+    action: "note.share",
+    userId: user.id,
+    orgId,
+    resourceId: noteId,
+    resourceType: "note",
+    metadata: { sharedWithUserId: shareWithUserId },
+  });
+
+  revalidatePath(`/notes/${noteId}`);
+  return { success: true };
+}
+
+export async function unshareNote(noteId: string, shareWithUserId: string) {
+  const { user, orgId } = await getSession();
+
+  const note = await db.note.findUnique({ where: { id: noteId } });
+  if (!note) throw new Error("Note not found");
+  if (note.authorId !== user.id) throw new Error("Only the author can unshare this note");
+
+  await db.noteShare.deleteMany({
+    where: { noteId, userId: shareWithUserId },
+  });
+
+  await writeAuditLog({
+    action: "note.unshare",
+    userId: user.id,
+    orgId,
+    resourceId: noteId,
+    resourceType: "note",
+    metadata: { unsharedUserId: shareWithUserId },
+  });
+
+  revalidatePath(`/notes/${noteId}`);
+  return { success: true };
+}
+
+export async function getSharedWithMe() {
+  const { user } = await getSession();
+
+  return db.note.findMany({
+    where: {
+      shares: { some: { userId: user.id } },
+    },
+    include: {
+      author: { select: { id: true, name: true, email: true } },
+      tags: { include: { tag: true } },
+      _count: { select: { versions: true, files: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
 export async function getNoteWithPermission(noteId: string) {
   const { user, orgId, role } = await getSession();
 

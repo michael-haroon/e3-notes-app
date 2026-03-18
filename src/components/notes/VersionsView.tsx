@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { DiffViewer } from "./DiffViewer";
 
 type Version = {
   id: string;
@@ -18,25 +19,47 @@ export function VersionsView({ noteId }: { noteId: string }) {
   const [selectedTo, setSelectedTo] = useState<number | null>(null);
   const [diff, setDiff] = useState<{ contentDiff: string; titleDiff: string | null } | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
+  const [restoring, setRestoring] = useState<number | null>(null);
+  const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch(`/api/notes/${noteId}/versions`)
-      .then((r) => r.json())
-      .then((data) => {
-        setVersions(data.versions ?? []);
-        setLoading(false);
-      });
-  }, [noteId]);
+  async function loadVersions() {
+    const res = await fetch(`/api/notes/${noteId}/versions`);
+    const data = await res.json();
+    setVersions(data.versions ?? []);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadVersions(); }, [noteId]);
 
   async function loadDiff() {
     if (!selectedFrom || !selectedTo) return;
     setDiffLoading(true);
-    const res = await fetch(
-      `/api/notes/${noteId}/versions?from=${selectedFrom}&to=${selectedTo}`
-    );
+    const res = await fetch(`/api/notes/${noteId}/versions?from=${selectedFrom}&to=${selectedTo}`);
     const data = await res.json();
     setDiff(data);
     setDiffLoading(false);
+  }
+
+  async function handleRestore(version: number) {
+    if (!confirm(`Restore note to v${version}? A new version will be created.`)) return;
+    setRestoring(version);
+    try {
+      const res = await fetch(`/api/notes/${noteId}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error);
+      }
+      setRestoreMsg(`Restored to v${version} successfully. A new version was created.`);
+      await loadVersions();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Restore failed");
+    } finally {
+      setRestoring(null);
+    }
   }
 
   if (loading) return <div className="text-gray-500">Loading versions...</div>;
@@ -45,10 +68,17 @@ export function VersionsView({ noteId }: { noteId: string }) {
     <div className="space-y-6">
       <h2 className="text-xl font-bold">Version History ({versions.length} versions)</h2>
 
+      {restoreMsg && (
+        <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+          {restoreMsg}
+          <button onClick={() => setRestoreMsg(null)} className="ml-2 text-green-500 hover:text-green-700">✕</button>
+        </div>
+      )}
+
       {versions.length >= 2 && (
         <div className="bg-white border rounded-xl p-5">
           <h3 className="font-semibold mb-3">Compare Versions</h3>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <select
               value={selectedFrom ?? ""}
               onChange={(e) => setSelectedFrom(parseInt(e.target.value))}
@@ -84,19 +114,17 @@ export function VersionsView({ noteId }: { noteId: string }) {
           </div>
 
           {diff && (
-            <div className="mt-4">
+            <div className="mt-4 space-y-3">
               {diff.titleDiff && (
-                <div className="mb-3">
+                <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">Title diff</p>
-                  <pre className="text-xs bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto">
-                    {diff.titleDiff}
-                  </pre>
+                  <DiffViewer diff={diff.titleDiff} />
                 </div>
               )}
-              <p className="text-xs font-medium text-gray-500 mb-1">Content diff</p>
-              <pre className="text-xs bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-96">
-                {diff.contentDiff}
-              </pre>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Content diff</p>
+                <DiffViewer diff={diff.contentDiff} />
+              </div>
             </div>
           )}
         </div>
@@ -110,13 +138,21 @@ export function VersionsView({ noteId }: { noteId: string }) {
                 <span className="font-mono text-sm font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
                   v{v.version}
                 </span>
-                <span className="text-sm text-gray-600">
-                  {v.title}
-                </span>
+                <span className="text-sm text-gray-700 font-medium">{v.title}</span>
               </div>
-              <div className="text-xs text-gray-400">
-                {v.author.name ?? v.author.email} •{" "}
-                {new Date(v.createdAt).toLocaleString()}
+              <div className="flex items-center gap-3">
+                <div className="text-xs text-gray-400 text-right">
+                  <span>{v.author.name ?? v.author.email}</span>
+                  <span className="mx-1">•</span>
+                  <span>{new Date(v.createdAt).toLocaleString()}</span>
+                </div>
+                <button
+                  onClick={() => handleRestore(v.version)}
+                  disabled={restoring === v.version}
+                  className="text-xs px-3 py-1 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                >
+                  {restoring === v.version ? "Restoring..." : "Restore"}
+                </button>
               </div>
             </div>
             <p className="text-sm text-gray-500 truncate">

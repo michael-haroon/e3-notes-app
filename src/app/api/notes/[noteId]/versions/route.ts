@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { canReadNote } from "@/lib/permissions";
+import { canReadNote, canWriteNote } from "@/lib/permissions";
 import { Role } from "@/generated/prisma";
+import { writeAuditLog } from "@/lib/audit";
 import * as Diff from "diff";
 
 export async function GET(
@@ -76,4 +77,56 @@ export async function GET(
   }
 
   return NextResponse.json({ versions });
+}
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { noteId: string } }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { noteId } = params;
+  const userId = session.user.id;
+  const orgId = session.activeOrgId;
+  if (!orgId) return NextResponse.json({ error: "No active org" }, { status: 400 });
+
+  const { version } = await req.json() as { version: number };
+
+  const [note, membership] = await Promise.all([
+    db.note.findUnique({ where: { id: noteId }, include: { shares: true } }),
+    db.orgMember.findUnique({ where: { orgId_userId: { orgId, userId } } }),
+  ]);
+
+  if (!note) return NextResponse.json({ error: "Note not found" }, { status: 404 });
+  if (!membership) return NextResponse.json({ error: "Not a member" }, { status: 403 });
+
+  const noteCtx = { authorId: note.authorId, visibility: note.visibility, orgId: note.orgId };
+  if (!canWriteNote({ id: userId, email: session.user.email }, { orgId, role: membership.role as Role }, noteCtx)) {
+    await writeAuditLog({ action: "note.permission_denied", userId, orgId, resourceId: noteId, resourceType: "note", metadata: { action: "restore" } });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const targetVersion = await db.noteVersion.findFirst({ where: { noteId, version } });
+  if (!targetVersion) return NextResponse.json({ error: "Version not found" }, { status: 404 });
+
+  const updated = await db.$transaction(async (tx) => {
+    const latest = await tx.noteVersion.findFirst({ where: { noteId }, orderBy: { version: "desc" } });
+    const nextVersion = (latest?.version ?? 0) + 1;
+
+    const upd = await tx.note.update({
+      where: { id: noteId },
+      data: { title: targetVersion.title, content: targetVersion.content },
+    });
+
+    await tx.noteVersion.create({
+      data: { noteId, version: nextVersion, title: targetVersion.title, content: targetVersion.content, authorId: userId },
+    });
+
+    return upd;
+  });
+
+  await writeAuditLog({ action: "note.restore", userId, orgId, resourceId: noteId, resourceType: "note", metadata: { restoredToVersion: version } });
+
+  return NextResponse.json({ success: true, note: updated });
 }
