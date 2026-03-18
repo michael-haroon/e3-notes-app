@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { createOrg } from "@/actions/orgs";
 
 export default function NewOrgPage() {
   const router = useRouter();
+  const { update } = useSession();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +18,9 @@ export default function NewOrgPage() {
     setLoading(true);
     setError("");
     try {
-      await createOrg(name);
+      const result = await createOrg(name);
+      // Refresh the JWT so activeOrgId is set before hitting the dashboard
+      await update({ activeOrgId: result.orgId });
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
