@@ -15,6 +15,16 @@ export type NoteSummary = {
   topics: string[];
 };
 
+async function callGroq(client: Groq, prompt: string) {
+  return client.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.3,
+    max_tokens: 512,
+    response_format: { type: "json_object" },
+  });
+}
+
 export async function generateNoteSummary(
   title: string,
   content: string
@@ -24,9 +34,9 @@ export async function generateNoteSummary(
   const prompt = `You are a helpful assistant that summarizes notes.
 
 Given the following note, produce a JSON response with:
-- summary: a 2-3 sentence summary
-- keyPoints: array of 3-5 key points (strings)
-- topics: array of topic tags (strings, lowercase, no spaces)
+- summary: a 2-3 sentence summary (string)
+- keyPoints: array of 3-5 key points (array of strings)
+- topics: array of topic tags (array of strings, lowercase, no spaces)
 
 Note title: ${title}
 Note content:
@@ -36,22 +46,30 @@ Respond ONLY with valid JSON, no markdown, no explanation.`;
 
   logger.info({ title: title.slice(0, 50) }, "ai.summarize_request");
 
-  const completion = await client.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.3,
-    max_tokens: 512,
-    response_format: { type: "json_object" },
-  });
+  const start = Date.now();
+  let completion;
+  try {
+    completion = await callGroq(client, prompt);
+  } catch (firstErr) {
+    logger.warn({ err: firstErr instanceof Error ? firstErr.message : firstErr, title: title.slice(0, 50) }, "ai.summarize_retry");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    completion = await callGroq(client, prompt);
+  }
+  const durationMs = Date.now() - start;
+  logger.info({ title: title.slice(0, 50), durationMs }, "ai.summarize_complete");
 
   const raw = completion.choices[0]?.message?.content ?? "{}";
 
   try {
     const parsed = JSON.parse(raw) as Partial<NoteSummary>;
     return {
-      summary: parsed.summary ?? "",
-      keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
-      topics: Array.isArray(parsed.topics) ? parsed.topics : [],
+      summary: typeof parsed.summary === "string" ? parsed.summary : "",
+      keyPoints: Array.isArray(parsed.keyPoints)
+        ? parsed.keyPoints.filter((p): p is string => typeof p === "string")
+        : [],
+      topics: Array.isArray(parsed.topics)
+        ? parsed.topics.filter((t): t is string => typeof t === "string")
+        : [],
     };
   } catch {
     logger.error({ raw }, "ai.summarize_parse_error");

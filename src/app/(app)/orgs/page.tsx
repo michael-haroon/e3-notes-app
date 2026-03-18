@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import Link from "next/link";
 import { OrgSettings } from "@/components/orgs/OrgSettings";
+import { isAtLeast } from "@/lib/permissions";
+import { Role } from "@/generated/prisma";
 
 export default async function OrgsPage() {
   const session = await auth();
@@ -39,6 +41,16 @@ export default async function OrgsPage() {
         <span className="text-sm font-medium">Org Settings</span>
       </nav>
       <main className="max-w-3xl mx-auto px-6 py-8">
+        {isAtLeast(membership.role as Role, Role.ADMIN) && (
+          <div className="mb-4 flex justify-end">
+            <Link
+              href="/audit"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+            >
+              View Audit Log &rarr;
+            </Link>
+          </div>
+        )}
         <OrgSettings
           org={membership.org}
           currentRole={membership.role}

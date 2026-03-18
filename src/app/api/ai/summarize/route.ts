@@ -6,6 +6,21 @@ import { canReadNote } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
 import { Role } from "@/generated/prisma";
 
+// In-memory rate limiter: max 10 requests per hour per user
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || entry.resetAt < now) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + 60 * 60 * 1000 });
+    return true;
+  }
+  if (entry.count >= 10) return false;
+  entry.count += 1;
+  return true;
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -18,6 +33,13 @@ export async function POST(req: NextRequest) {
 
   if (!orgId || !noteId) {
     return NextResponse.json({ error: "Missing noteId or activeOrgId" }, { status: 400 });
+  }
+
+  if (!checkRateLimit(userId)) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded: max 10 AI summarize requests per hour" },
+      { status: 429 }
+    );
   }
 
   const [note, membership] = await Promise.all([
@@ -68,6 +90,71 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({ success: true, summary: { ...summary, data: summaryData } });
+}
+
+export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const noteId = searchParams.get("noteId");
+  if (!noteId) {
+    return NextResponse.json({ error: "Missing noteId" }, { status: 400 });
+  }
+
+  const userId = session.user.id;
+  const orgId = session.activeOrgId;
+
+  if (!orgId) {
+    return NextResponse.json({ error: "No active org" }, { status: 400 });
+  }
+
+  const [note, membership] = await Promise.all([
+    db.note.findUnique({ where: { id: noteId }, include: { shares: true } }),
+    db.orgMember.findUnique({ where: { orgId_userId: { orgId, userId } } }),
+  ]);
+
+  if (!note) return NextResponse.json({ error: "Note not found" }, { status: 404 });
+  if (!membership) return NextResponse.json({ error: "Not a member" }, { status: 403 });
+
+  const userCtx = { id: userId, email: session.user.email };
+  const orgCtx = { orgId, role: membership.role as Role };
+  const noteCtx = {
+    authorId: note.authorId,
+    visibility: note.visibility,
+    orgId: note.orgId,
+  };
+
+  if (!canReadNote(userCtx, orgCtx, noteCtx, note.shares)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const summaries = await db.aISummary.findMany({
+    where: { noteId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const parsed = summaries.map((s) => {
+    let data: unknown = null;
+    try {
+      data = JSON.parse(s.content);
+    } catch {
+      data = null;
+    }
+    return {
+      id: s.id,
+      noteId: s.noteId,
+      model: s.model,
+      accepted: s.accepted,
+      acceptedAt: s.acceptedAt,
+      createdAt: s.createdAt,
+      data,
+    };
+  });
+
+  return NextResponse.json({ success: true, summaries: parsed });
 }
 
 export async function PATCH(req: NextRequest) {

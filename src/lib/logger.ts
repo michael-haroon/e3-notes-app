@@ -31,10 +31,11 @@ export type LogAction =
   | "ai.summarize"
   | "ai.accept"
   | "ai.permission_denied"
-  | "search.query"
-  | "tag.create"
-  | "tag.delete"
-  | "note.share"
-  | "note.unshare"
-  | "note.restore"
-  | "file.delete";
+  | "search.query";
+
+export function logRequest(method: string, pathname: string, userId?: string, durationMs?: number, status?: number) {
+  logger.info({ method, pathname, userId, durationMs, status }, "http");
+}
+export function logError(err: unknown, context?: Record<string, unknown>) {
+  logger.error({ err: err instanceof Error ? { message: err.message, stack: err.stack } : err, ...context }, "error");
+}
