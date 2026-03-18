@@ -1,27 +1,9 @@
-import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
 
-// Public routes that don't require auth
-const PUBLIC_ROUTES = ["/login", "/register", "/api/auth", "/api/health"];
+const { auth } = NextAuth(authConfig);
 
-export default auth(async (req: NextRequest & { auth: { user?: { id: string } } | null }) => {
-  const { pathname } = req.nextUrl;
-
-  const isPublic = PUBLIC_ROUTES.some(
-    (r) => pathname === r || pathname.startsWith(r + "/")
-  );
-
-  if (isPublic) return NextResponse.next();
-
-  if (!req.auth?.user?.id) {
-    const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
-});
+export default auth;
 
 export const config = {
   matcher: [

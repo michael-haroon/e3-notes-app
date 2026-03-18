@@ -29,7 +29,7 @@ export function VersionsView({ noteId }: { noteId: string }) {
     setLoading(false);
   }
 
-  useEffect(() => { loadVersions(); }, [noteId]);
+  useEffect(() => { loadVersions(); }, [noteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadDiff() {
     if (!selectedFrom || !selectedTo) return;

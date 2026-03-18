@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateNote, shareNote, unshareNote } from "@/actions/notes";
-import { Visibility } from "@/generated/prisma";
+import { Visibility } from "@/generated/prisma/enums";
 
 const visibilityOptions = [
   { value: Visibility.ORG, label: "Org", desc: "All org members can view" },

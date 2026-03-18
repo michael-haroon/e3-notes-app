@@ -205,6 +205,7 @@ export function FileUploader({ noteId, onUpload }: Props) {
               >
                 {/* Thumbnail or icon */}
                 {isImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={file.url}
                     alt={file.filename}

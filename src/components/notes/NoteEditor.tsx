@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createNote, updateNote } from "@/actions/notes";
-import { Visibility } from "@/generated/prisma";
+import { Visibility } from "@/generated/prisma/enums";
 
 type Tag = { id: string; name: string };
 
@@ -37,7 +37,6 @@ export function NoteEditor(props: NoteEditorProps) {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
     isEdit ? props.note.tagIds : []
   );
-  const [newTagName, setNewTagName] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);

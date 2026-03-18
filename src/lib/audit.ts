@@ -15,7 +15,7 @@ export async function writeAuditLog({
   orgId?: string | null;
   resourceId?: string;
   resourceType?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
   ipAddress?: string;
 }) {
   try {
@@ -26,7 +26,7 @@ export async function writeAuditLog({
         orgId,
         resourceId,
         resourceType,
-        metadata,
+        metadata: metadata as object | undefined,
         ipAddress,
       },
     });

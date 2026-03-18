@@ -18,7 +18,6 @@ export default async function NotePage({
       <NoteDetail
         note={note}
         currentUserId={session.user.id}
-        activeOrgId={session.activeOrgId}
       />
     );
   } catch (err) {

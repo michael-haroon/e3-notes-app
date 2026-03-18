@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Visibility } from "@/generated/prisma";
+import { Visibility } from "@/generated/prisma/enums";
 
 type SearchResult = {
   id: string;

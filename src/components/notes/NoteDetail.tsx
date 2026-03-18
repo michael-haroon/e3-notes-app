@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { deleteNote } from "@/actions/notes";
 import { useRouter } from "next/navigation";
-import { Visibility } from "@/generated/prisma";
+import { Visibility } from "@/generated/prisma/enums";
 import { FileUploader } from "@/components/notes/FileUploader";
 
 type Note = {
@@ -32,11 +32,9 @@ const visibilityLabels: Record<Visibility, string> = {
 export function NoteDetail({
   note,
   currentUserId,
-  activeOrgId,
 }: {
   note: Note;
   currentUserId: string;
-  activeOrgId: string | undefined;
 }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);

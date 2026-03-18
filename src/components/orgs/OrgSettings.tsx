@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { inviteMember } from "@/actions/orgs";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 
 type Member = {
   id: string;

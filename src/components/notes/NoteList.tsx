@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Visibility } from "@/generated/prisma";
+import { Visibility } from "@/generated/prisma/enums";
 
 type Note = {
   id: string;
