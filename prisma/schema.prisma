@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum Visibility {
+  PUBLIC
+  ORG
+  PRIVATE
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  name          String?
+  passwordHash  String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  orgs          OrgMember[]
+  notes         Note[]
+  noteVersions  NoteVersion[]
+  shares        NoteShare[]
+  files         File[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Org {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  members     OrgMember[]
+  notes       Note[]
+  tags        Tag[]
+  files       File[]
+  invites     OrgInvite[]
+  auditLogs   AuditLog[]
+
+  @@map("orgs")
+}
+
+model OrgMember {
+  id        String    @id @default(cuid())
+  orgId     String
+  userId    String
+  role      Role      @default(MEMBER)
+  joinedAt  DateTime  @default(now())
+
+  org       Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@map("org_members")
+}
+
+model OrgInvite {
+  id        String    @id @default(cuid())
+  orgId     String
+  email     String
+  token     String    @unique @default(cuid())
+  role      Role      @default(MEMBER)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  org       Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("org_invites")
+}
+
+model Note {
+  id           String      @id @default(cuid())
+  title        String
+  content      String      @default("")
+  visibility   Visibility  @default(ORG)
+  orgId        String
+  authorId     String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  org          Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  author       User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  versions     NoteVersion[]
+  tags         NoteTag[]
+  shares       NoteShare[]
+  files        File[]
+  aiSummaries  AISummary[]
+
+  @@index([orgId])
+  @@index([authorId])
+  @@index([orgId, visibility])
+  @@map("notes")
+}
+
+model NoteVersion {
+  id        String    @id @default(cuid())
+  noteId    String
+  version   Int
+  title     String
+  content   String
+  authorId  String
+  createdAt DateTime  @default(now())
+
+  note      Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@unique([noteId, version])
+  @@index([noteId])
+  @@map("note_versions")
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String
+  orgId     String
+  createdAt DateTime  @default(now())
+
+  org       Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  notes     NoteTag[]
+
+  @@unique([orgId, name])
+  @@map("tags")
+}
+
+model NoteTag {
+  noteId    String
+  tagId     String
+  createdAt DateTime  @default(now())
+
+  note      Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+  @@map("note_tags")
+}
+
+model NoteShare {
+  id        String    @id @default(cuid())
+  noteId    String
+  userId    String
+  createdAt DateTime  @default(now())
+
+  note      Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, userId])
+  @@map("note_shares")
+}
+
+model File {
+  id          String    @id @default(cuid())
+  filename    String
+  mimeType    String
+  size        Int
+  storageKey  String    @unique
+  orgId       String
+  uploaderId  String
+  noteId      String?
+  createdAt   DateTime  @default(now())
+
+  org         Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  uploader    User      @relation(fields: [uploaderId], references: [id])
+  note        Note?     @relation(fields: [noteId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([noteId])
+  @@map("files")
+}
+
+model AISummary {
+  id          String    @id @default(cuid())
+  noteId      String
+  content     String
+  model       String
+  accepted    Boolean   @default(false)
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  note        Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@map("ai_summaries")
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  action      String
+  userId      String?
+  orgId       String?
+  resourceId  String?
+  resourceType String?
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  org         Org?      @relation(fields: [orgId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([orgId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

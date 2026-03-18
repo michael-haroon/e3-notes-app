@@ -1,0 +1,168 @@
+"use server";
+
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { writeAuditLog } from "@/lib/audit";
+import { canInviteMembers, canChangeRole } from "@/lib/permissions";
+import { Role } from "@/generated/prisma";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { v4 as uuidv4 } from "uuid";
+
+async function getSession() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  return session;
+}
+
+export async function createOrg(name: string) {
+  const session = await getSession();
+  const userId = session.user.id;
+
+  const slug =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") +
+    "-" +
+    uuidv4().slice(0, 6);
+
+  const org = await db.$transaction(async (tx) => {
+    const created = await tx.org.create({ data: { name, slug } });
+    await tx.orgMember.create({
+      data: { orgId: created.id, userId, role: Role.OWNER },
+    });
+    return created;
+  });
+
+  await writeAuditLog({
+    action: "org.create",
+    userId,
+    orgId: org.id,
+    resourceType: "org",
+  });
+
+  revalidatePath("/dashboard");
+  return { success: true, orgId: org.id, slug: org.slug };
+}
+
+const inviteSchema = z.object({
+  email: z.string().email(),
+  role: z.nativeEnum(Role).default(Role.MEMBER),
+});
+
+export async function inviteMember(orgId: string, input: z.infer<typeof inviteSchema>) {
+  const session = await getSession();
+  const userId = session.user.id;
+  const data = inviteSchema.parse(input);
+
+  const membership = await db.orgMember.findUnique({
+    where: { orgId_userId: { orgId, userId } },
+  });
+  if (!membership) throw new Error("Not a member of this org");
+
+  if (!canInviteMembers({ orgId, role: membership.role })) {
+    throw new Error("Permission denied: must be ADMIN or OWNER to invite");
+  }
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const invite = await db.orgInvite.create({
+    data: {
+      orgId,
+      email: data.email,
+      role: data.role,
+      expiresAt,
+    },
+  });
+
+  await writeAuditLog({
+    action: "org.invite",
+    userId,
+    orgId,
+    resourceId: invite.id,
+    resourceType: "org_invite",
+    metadata: { email: data.email, role: data.role },
+  });
+
+  return { success: true, token: invite.token, inviteId: invite.id };
+}
+
+export async function acceptInvite(token: string) {
+  const session = await getSession();
+  const userId = session.user.id;
+  const userEmail = session.user.email;
+
+  const invite = await db.orgInvite.findUnique({ where: { token } });
+  if (!invite) throw new Error("Invite not found");
+  if (invite.usedAt) throw new Error("Invite already used");
+  if (invite.expiresAt < new Date()) throw new Error("Invite expired");
+  if (invite.email !== userEmail) throw new Error("Invite is for a different email");
+
+  await db.$transaction(async (tx) => {
+    await tx.orgInvite.update({
+      where: { id: invite.id },
+      data: { usedAt: new Date() },
+    });
+    await tx.orgMember.upsert({
+      where: { orgId_userId: { orgId: invite.orgId, userId } },
+      create: { orgId: invite.orgId, userId, role: invite.role },
+      update: { role: invite.role },
+    });
+  });
+
+  await writeAuditLog({
+    action: "org.join",
+    userId,
+    orgId: invite.orgId,
+    metadata: { via: "invite" },
+  });
+
+  revalidatePath("/dashboard");
+  return { success: true, orgId: invite.orgId };
+}
+
+export async function changeMemberRole(
+  orgId: string,
+  targetUserId: string,
+  newRole: Role
+) {
+  const session = await getSession();
+  const userId = session.user.id;
+
+  const membership = await db.orgMember.findUnique({
+    where: { orgId_userId: { orgId, userId } },
+  });
+  if (!membership) throw new Error("Not a member of this org");
+
+  if (!canChangeRole({ orgId, role: membership.role }, newRole)) {
+    throw new Error("Permission denied");
+  }
+
+  await db.orgMember.update({
+    where: { orgId_userId: { orgId, userId: targetUserId } },
+    data: { role: newRole },
+  });
+
+  await writeAuditLog({
+    action: "org.role_change",
+    userId,
+    orgId,
+    resourceId: targetUserId,
+    resourceType: "user",
+    metadata: { newRole },
+  });
+
+  revalidatePath(`/orgs/${orgId}/members`);
+  return { success: true };
+}
+
+export async function getUserOrgs() {
+  const session = await getSession();
+  const userId = session.user.id;
+
+  return db.orgMember.findMany({
+    where: { userId },
+    include: { org: true },
+    orderBy: { joinedAt: "asc" },
+  });
+}

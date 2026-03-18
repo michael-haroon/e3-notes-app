@@ -1,0 +1,62 @@
+# NOTES.md — Agent Build Log
+
+## Session Start
+
+Building a multi-tenant notes app per the AI Agent Take-Home spec. Full plan created before coding.
+
+## Architecture Decisions
+
+**Tech stack selected:**
+- Next.js 14 App Router — full-stack RSC, auth enforced at render time
+- Prisma 7 + PostgreSQL 16 — type-safe ORM, PG FTS for search at scale
+- NextAuth.js v5 (beta) — Credentials provider, JWT strategy
+- MinIO (Docker) → S3-compatible, storage key never exposed
+- Groq SDK (llama-3.3-70b-versatile) — AI summaries with JSON mode
+- pino — structured logging, stdout for Railway + AuditLog DB table
+- Vitest — unit + integration tests
+
+**Security decisions:**
+- OrgId ALWAYS from JWT session, never from client body
+- File storage keys never exposed — all downloads proxied through /api/files/[fileId]
+- Audit log writes on every permission denial before throwing
+- PRIVATE notes: only author + explicit NoteShare entries can read
+
+## Implementation Order
+
+1. MVP scaffold (Next.js init, Prisma schema, auth, CRUD)
+2. Full Prisma schema with FTS trigger + GIN index migration
+3. Permission system (lib/permissions.ts) — TDD with unit tests
+4. Server actions (notes, orgs, auth) all call permission checks
+5. UI pages (dashboard, notes, orgs, search)
+6. Feature branches via parallel sub-agents:
+   - tags-visibility
+   - versioning
+   - search
+   - files
+   - ai-logging
+   - seed
+
+## FTS Design
+
+PostgreSQL `tsvector` maintained by SQL trigger (not app code) on INSERT/UPDATE.
+GIN index on `searchVector`, trigram index on `title` for partial match.
+Search query embeds permission check in SQL — no post-filtering.
+Single raw SQL query with org-boundary + visibility/share enforcement in WHERE clause.
+
+## Multi-tenancy
+
+OrgId injected from JWT session via NextAuth callback. Middleware guards all routes.
+Org switcher calls `session.update({ activeOrgId })` to switch context.
+All server actions verify membership before acting.
+
+## Version Tracking
+
+Auto-version on every note save via `$transaction`. `NoteVersion.version` is explicit integer.
+Diff API uses `diff` npm package, returns unified patch format.
+
+## Known Decisions / Trade-offs
+
+- Using raw SQL for search (not Prisma queries) — necessary for tsvector + permission filter in one query
+- NextAuth v5 beta — breaking changes from v4, session type augmentation needed
+- MinIO for local dev, env-var switchable to AWS S3 for production
+- Seed creates 10k notes in batches of 100 to avoid memory issues
