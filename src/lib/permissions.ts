@@ -55,9 +55,7 @@ export function canReadNote(
 
 /**
  * Can the user write (edit content/title/tags of) this note?
- * - Author always can
- * - ADMIN or OWNER can edit any note in their org
- * Note: visibility changes are separately gated by canChangeVisibility.
+ * Only the original author can edit. Admin/Owner can delete but not edit.
  */
 export function canWriteNote(
   user: SessionUser,
@@ -65,8 +63,7 @@ export function canWriteNote(
   note: NoteContext
 ): boolean {
   if (org.orgId !== note.orgId) return false;
-  if (note.authorId === user.id) return true;
-  return isAtLeast(org.role, Role.ADMIN);
+  return note.authorId === user.id;
 }
 
 /**

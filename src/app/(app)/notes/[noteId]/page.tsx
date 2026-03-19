@@ -19,7 +19,7 @@ export default async function NotePage({
     const note = await getNoteWithPermission(params.noteId);
     const role = (session.activeOrgRole ?? "MEMBER") as Role;
     const isAuthor = note.authorId === session.user.id;
-    const canEdit = isAuthor || isAtLeast(role, Role.ADMIN);
+    const canEdit = isAuthor;
     const canDelete = isAuthor || isAtLeast(role, Role.ADMIN);
 
     // Load org members for the share panel (only when author + private)

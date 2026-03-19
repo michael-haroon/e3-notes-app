@@ -67,7 +67,7 @@ export async function inviteMember(orgId: string, input: z.infer<typeof inviteSc
 
   // Only allow inviting users who already have an account
   const invitedUser = await db.user.findUnique({ where: { email: data.email } });
-  if (!invitedUser) throw new Error("No account found with that email address");
+  if (!invitedUser) throw new Error("User doesn't exist! Make sure they've registered an account first.");
 
   // Don't invite someone already in the org
   const existing = await db.orgMember.findUnique({
