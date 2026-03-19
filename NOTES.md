@@ -64,6 +64,21 @@ Diff API uses `diff` npm package, returns unified patch format.
 - NextAuth v5 `UntrustedHost` error in Docker: fixed by `trustHost: true` in auth config + `AUTH_TRUST_HOST=1` in docker-compose.
 - Prisma 7 breaking changes: `@prisma/adapter-pg` now required, `node:` protocol imports needed webpack externals, middleware must use edge-safe auth config.
 
+## Session 4 — Org lifecycle + invite UX
+
+**Changes:**
+- `leaveOrg`: any member can leave; last-owner guard prevents orphaned orgs
+- `deleteOrg`: owner-only; cascades everything via Prisma FK constraints
+- `denyInvite`: deletes the invite record; removes it from both sides cleanly
+- OrgSettings: Danger Zone section with Leave and Delete buttons; both trigger `session.update({})` and navigate to /dashboard so stale session is refreshed
+- AcceptInviteButton: renamed internal state, added Decline button alongside Accept
+- `inviteMember`: already restricted to existing accounts from session 3
+
+**Design decisions:**
+- `deleteOrg` uses `db.org.delete()` which cascades all related records via FK `onDelete: Cascade` — no need to manually clean up notes, members, files, etc.
+- On leave/delete, `session.update({})` triggers the JWT callback which re-fetches memberships; if the user has other orgs, one is automatically set as active
+- Deny invite deletes the record rather than marking it; no "declined" state needed for this app
+
 ## Session 3 — Permission model revision + auth fixes
 
 **Changes:**

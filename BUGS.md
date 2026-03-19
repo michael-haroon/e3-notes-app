@@ -35,6 +35,13 @@
 **Fix:** `canReadNote` for PRIVATE notes only checks `authorId === user.id` OR share entry exists. Role is not checked.
 **Status:** Correctly implemented, tested in permissions.test.ts
 
+## Bug 014: Edit link/page accessible to all authenticated users
+**Found:** Live testing — regular members could navigate to /notes/[id]/edit for any note
+**Severity:** Medium — data integrity (members could attempt edits on others' notes)
+**Description:** NoteDetail showed the Edit link to every user regardless of role/authorship. The edit page itself had no permission check; only the server action blocked saves. Members could see the full edit form for any note.
+**Fix:** Edit link now hidden unless `canEdit` (author OR admin/owner). Edit page redirects unauthorized users back to the note view.
+**Status:** Fixed
+
 ## Bug 010: CSRF MissingCSRF on login — NextAuth v5 container hostname mismatch
 **Found:** Live testing in Docker
 **Severity:** Critical — login entirely broken

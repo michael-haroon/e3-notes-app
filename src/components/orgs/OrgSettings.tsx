@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inviteMember } from "@/actions/orgs";
+import { useSession } from "next-auth/react";
+import { inviteMember, leaveOrg, deleteOrg } from "@/actions/orgs";
 import { Role } from "@/generated/prisma/enums";
 
 type Member = {
@@ -36,11 +37,15 @@ export function OrgSettings({
   pendingInvites: Invite[];
 }) {
   const router = useRouter();
+  const { update } = useSession();
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>(Role.MEMBER);
   const [inviting, setInviting] = useState(false);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [leaving, setLeaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [dangerError, setDangerError] = useState("");
 
   const canInvite = currentRole === Role.ADMIN || currentRole === Role.OWNER;
 
@@ -57,6 +62,36 @@ export function OrgSettings({
       setError(err instanceof Error ? err.message : "Invite failed");
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleLeave() {
+    if (!confirm(`Leave ${org.name}? You will lose access to all notes in this org.`)) return;
+    setLeaving(true);
+    setDangerError("");
+    try {
+      await leaveOrg(org.id);
+      await update({});
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      setDangerError(err instanceof Error ? err.message : "Failed to leave org");
+      setLeaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Permanently delete "${org.name}"? This will delete ALL notes, files, and members. This cannot be undone.`)) return;
+    setDeleting(true);
+    setDangerError("");
+    try {
+      await deleteOrg(org.id);
+      await update({});
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      setDangerError(err instanceof Error ? err.message : "Failed to delete org");
+      setDeleting(false);
     }
   }
 
@@ -168,6 +203,36 @@ export function OrgSettings({
           </div>
         </div>
       )}
+      <div className="bg-white rounded-xl border border-red-200 p-6">
+        <h3 className="font-semibold text-red-800 mb-1">Danger Zone</h3>
+        <p className="text-xs text-gray-500 mb-4">These actions are irreversible.</p>
+
+        {dangerError && (
+          <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            {dangerError}
+          </div>
+        )}
+
+        <div className="flex gap-3 flex-wrap">
+          <button
+            onClick={handleLeave}
+            disabled={leaving || deleting}
+            className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 disabled:opacity-50"
+          >
+            {leaving ? "Leaving..." : "Leave org"}
+          </button>
+
+          {currentRole === Role.OWNER && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting || leaving}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleting ? "Deleting..." : "Delete org"}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

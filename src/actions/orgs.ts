@@ -166,6 +166,61 @@ export async function changeMemberRole(
   return { success: true };
 }
 
+export async function leaveOrg(orgId: string) {
+  const session = await getSession();
+  const userId = session.user.id;
+
+  const membership = await db.orgMember.findUnique({
+    where: { orgId_userId: { orgId, userId } },
+  });
+  if (!membership) throw new Error("Not a member of this org");
+
+  if (membership.role === Role.OWNER) {
+    const ownerCount = await db.orgMember.count({ where: { orgId, role: Role.OWNER } });
+    if (ownerCount === 1) {
+      throw new Error("You are the last owner. Transfer ownership or delete the org before leaving.");
+    }
+  }
+
+  await db.orgMember.delete({ where: { orgId_userId: { orgId, userId } } });
+
+  await writeAuditLog({ action: "org.member_remove", userId, orgId, resourceId: userId, resourceType: "user", metadata: { self: true } });
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function deleteOrg(orgId: string) {
+  const session = await getSession();
+  const userId = session.user.id;
+
+  const membership = await db.orgMember.findUnique({
+    where: { orgId_userId: { orgId, userId } },
+  });
+  if (!membership || membership.role !== Role.OWNER) {
+    throw new Error("Only owners can delete an org");
+  }
+
+  await db.org.delete({ where: { id: orgId } });
+
+  await writeAuditLog({ action: "org.create", userId, orgId, resourceType: "org", metadata: { deleted: true } });
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function denyInvite(inviteId: string) {
+  const session = await getSession();
+  const userEmail = session.user.email;
+
+  const invite = await db.orgInvite.findUnique({ where: { id: inviteId } });
+  if (!invite) throw new Error("Invite not found");
+  if (invite.email !== userEmail) throw new Error("Not your invite");
+
+  await db.orgInvite.delete({ where: { id: inviteId } });
+
+  revalidatePath("/invites");
+  return { success: true };
+}
+
 export async function getUserOrgs() {
   const session = await getSession();
   const userId = session.user.id;

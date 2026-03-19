@@ -49,7 +49,7 @@ export default async function InvitesPage() {
                     {" · "}Expires {new Date(invite.expiresAt).toLocaleDateString()}
                   </p>
                 </div>
-                <AcceptInviteButton token={invite.token} orgName={invite.org.name} />
+                <AcceptInviteButton token={invite.token} inviteId={invite.id} orgName={invite.org.name} />
               </div>
             ))}
           </div>
