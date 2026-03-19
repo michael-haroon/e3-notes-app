@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TeamNotes
 
-## Getting Started
+Multi-tenant team notes app with full-text search, file attachments, AI summaries, and role-based access control.
 
-First, run the development server:
+## Quick start (Docker)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker compose up
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App: http://localhost:3000  
+MinIO console: http://localhost:9001 (minioadmin / minioadmin)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Seed accounts (password: `password123`):
+- `user1@example.com` — OWNER of all 3 orgs (Acme Corp, Beta Labs, Gamma Inc)
+- `user2@example.com` — ADMIN in Acme and Beta
+- `user3–9@example.com` — various MEMBER/ADMIN roles
+- `user10@example.com` — no org (demonstrates the empty-state flow)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ⚠️ Email is a username, not a real email
 
-## Learn More
+**No emails are ever sent.** The "email" field is used purely as a unique login identifier — think of it as a username that happens to look like an email address.
 
-To learn more about Next.js, take a look at the following resources:
+This affects:
+- **Registration** — any string in email format works (`alice@example.com`, `alice@fake.local`, etc.)
+- **Org invites** — invites are delivered in-app at `/invites`, not by email. The inviter shares the link or tells the invitee to check their Invites inbox.
+- **Password reset** — not implemented; there is no email delivery.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 14 App Router |
+| Database | PostgreSQL 16 + Prisma 7 |
+| Auth | NextAuth.js v5 (JWT, Credentials) |
+| Search | PostgreSQL FTS — `tsvector` + GIN index |
+| Storage | MinIO (S3-compatible) |
+| AI | Groq — `llama-3.3-70b-versatile` |
+| Logging | pino + AuditLog DB table |
 
-## Deploy on Vercel
+## Environment variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See `.env.example`. Required for production:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+DATABASE_URL
+AUTH_SECRET          # openssl rand -base64 32
+AUTH_URL             # https://your-app.railway.app
+GROQ_API_KEY
+STORAGE_ENDPOINT / STORAGE_ACCESS_KEY / STORAGE_SECRET_KEY / STORAGE_BUCKET
+```
+
+## Local development (without Docker)
+
+```bash
+pnpm install
+pnpm db:migrate      # requires DATABASE_URL in .env.local
+pnpm db:seed         # loads 10k notes + test accounts
+pnpm dev
+```
+
+## Key design decisions
+
+- **OrgId always from JWT** — never trusted from the client request body
+- **File downloads proxied** — MinIO storage keys never exposed to the browser
+- **Visibility**: `ORG` (all members) or `PRIVATE` (author + explicit shares). No public notes.
+- **Only authors can change visibility** — admins/owners can edit content but cannot re-publish someone else's private note
+- **Invites are in-app only** — see `src/app/(app)/invites/page.tsx`
