@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { NoteEditor } from "@/components/notes/NoteEditor";
+import { isAtLeast } from "@/lib/permissions";
+import { Role } from "@/generated/prisma";
 
 export default async function EditNotePage({
   params,
@@ -25,6 +27,10 @@ export default async function EditNotePage({
   ]);
 
   if (!note) notFound();
+
+  const role = (session.activeOrgRole ?? "MEMBER") as Role;
+  const canEdit = note.authorId === currentUserId || isAtLeast(role, Role.ADMIN);
+  if (!canEdit) redirect(`/notes/${params.noteId}`);
 
   return (
     <NoteEditor

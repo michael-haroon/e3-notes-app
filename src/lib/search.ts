@@ -72,8 +72,9 @@ export async function searchNotes({
 
   // Admin/Owner can see all notes in the org; members see ORG + own PRIVATE + shared
   const isPrivileged = isAtLeast(role, Role.ADMIN);
+  // $2 must always be referenced; for privileged users the clause is always true
   const visibilityClause = isPrivileged
-    ? "1=1" // no visibility filter — see all
+    ? `($2::text IS NOT NULL)` // always true; keeps $2 bound for pg driver
     : `(n.visibility = 'ORG' OR n."authorId" = $2 OR EXISTS (
         SELECT 1 FROM note_shares ns WHERE ns."noteId" = n.id AND ns."userId" = $2
       ))`;

@@ -32,9 +32,11 @@ const visibilityLabels: Record<string, string> = {
 export function NoteDetail({
   note,
   currentUserId,
+  canEdit = false,
 }: {
   note: Note;
   currentUserId: string;
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -127,12 +129,14 @@ export function NoteDetail({
               )}
             </div>
             <div className="flex gap-2 shrink-0">
-              <Link
-                href={`/notes/${note.id}/edit`}
-                className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
-              >
-                Edit
-              </Link>
+              {canEdit && (
+                <Link
+                  href={`/notes/${note.id}/edit`}
+                  className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
+                >
+                  Edit
+                </Link>
+              )}
               <Link
                 href={`/notes/${note.id}/versions`}
                 className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"

@@ -3,6 +3,8 @@ import { redirect, notFound } from "next/navigation";
 import { getNoteWithPermission } from "@/actions/notes";
 import Link from "next/link";
 import { NoteDetail } from "@/components/notes/NoteDetail";
+import { isAtLeast } from "@/lib/permissions";
+import { Role } from "@/generated/prisma";
 
 export default async function NotePage({
   params,
@@ -14,10 +16,13 @@ export default async function NotePage({
 
   try {
     const note = await getNoteWithPermission(params.noteId);
+    const role = (session.activeOrgRole ?? "MEMBER") as Role;
+    const canEdit = note.authorId === session.user.id || isAtLeast(role, Role.ADMIN);
     return (
       <NoteDetail
         note={note}
         currentUserId={session.user.id}
+        canEdit={canEdit}
       />
     );
   } catch (err) {
