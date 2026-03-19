@@ -106,3 +106,4 @@ First correction allowed admin/owner to edit. User clarified during live testing
 2. **Audit log completeness** — `removeMember` audit log uses `self: true` metadata incorrectly (copied from `leaveOrg`); should be the target user's context
 3. **Note ownership on member removal** — when a member is removed, their notes remain in the org (accessible to admin/owner). Whether this is correct is a product decision not yet documented.
 4. **Search vector for updated notes** — seed script updates note content via `db.note.update()` but the FTS trigger fires on UPDATE so vectors should be current; worth verifying with a direct SQL query in production.
+5. **Complete user experience** — what does the user expect?
