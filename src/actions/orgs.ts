@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { canInviteMembers, canChangeRole } from "@/lib/permissions";
+import { canInviteMembers, canChangeRole, canRemoveMember } from "@/lib/permissions";
 import { Role } from "@/generated/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -163,6 +163,42 @@ export async function changeMemberRole(
   });
 
   revalidatePath(`/orgs/${orgId}/members`);
+  return { success: true };
+}
+
+export async function removeMember(orgId: string, targetUserId: string) {
+  const session = await getSession();
+  const userId = session.user.id;
+
+  const [membership, targetMembership] = await Promise.all([
+    db.orgMember.findUnique({ where: { orgId_userId: { orgId, userId } } }),
+    db.orgMember.findUnique({ where: { orgId_userId: { orgId, userId: targetUserId } } }),
+  ]);
+
+  if (!membership) throw new Error("Not a member of this org");
+  if (!targetMembership) throw new Error("Target user is not a member");
+
+  if (!canRemoveMember({ orgId, role: membership.role }, targetUserId, userId)) {
+    throw new Error("Permission denied");
+  }
+
+  // Cannot remove the last owner
+  if (targetMembership.role === Role.OWNER) {
+    const ownerCount = await db.orgMember.count({ where: { orgId, role: Role.OWNER } });
+    if (ownerCount === 1) throw new Error("Cannot remove the last owner of an org");
+  }
+
+  await db.orgMember.delete({ where: { orgId_userId: { orgId, userId: targetUserId } } });
+
+  await writeAuditLog({
+    action: "org.member_remove",
+    userId,
+    orgId,
+    resourceId: targetUserId,
+    resourceType: "user",
+  });
+
+  revalidatePath("/orgs");
   return { success: true };
 }
 

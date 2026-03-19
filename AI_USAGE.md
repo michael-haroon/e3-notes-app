@@ -84,3 +84,22 @@ Six feature branches ran simultaneously after MVP commit:
 **What I'd trust agents with vs. not:**
 - Trust: boilerplate CRUD, UI components, migration SQL structure
 - Don't trust: framework-version-specific config (always verify against changelogs), raw SQL with ORM-generated schemas, edge vs. server runtime boundaries
+
+## Sessions 3–5 — Iterative live review + production fixes
+
+**What went wrong and required correction:**
+
+1. **Permission model drift** — Agent initially allowed admin/owner to edit others' notes ("CRUD for admins"). User clarified: admin/owner can view + delete only; only authors edit. Took two correction cycles to get right (`canWriteNote` was fixed twice).
+
+2. **Production DB connection exhaustion** — The Prisma singleton guard `if (process.env.NODE_ENV !== "production")` was written that way intentionally to avoid Next.js hot-reload issues in dev, but nobody caught that it meant zero pooling in production. Surfaced only under live Railway traffic.
+
+3. **JWT not clearing on org leave** — `session.update({})` pattern reused from invite acceptance. The JWT callback only acted when `session.activeOrgId` was present in the payload. Empty update did nothing. Not caught because local testing always had a fallback org.
+
+4. **Invite email matched non-existent users** — Initial `inviteMember` accepted any email format without checking if a user account existed. User discovered this live.
+
+**What was built across these sessions without major issues:**
+- Org leave/delete with last-owner protection
+- Invite decline (server-side delete)
+- SharePanel for PRIVATE notes (author-only)
+- Remove member (admin/owner)
+- No-org landing page with invite inbox shortcut

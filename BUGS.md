@@ -103,3 +103,31 @@
 **Severity:** Low - user detail issue
 **Description:** For each version (ie. v1, v2,...), the status for them is "Unknown".
 **Status:** Not Fixed
+
+## Bug 016: Admin/Owner could edit notes they don't own
+**Found:** Live testing — userA (OWNER) could access /notes/[id]/edit for notes they didn't write
+**Severity:** Medium — violates spec ("only authors can edit")
+**Description:** `canWriteNote` allowed ADMIN/OWNER to edit any note. `canEdit` in the note page was `isAuthor || isAtLeast(role, ADMIN)`. Edit button visible to all.
+**Fix:** `canWriteNote` → author-only. `canEdit = isAuthor`. Edit button hidden for non-authors. Edit page redirects non-authors.
+**Status:** Fixed
+
+## Bug 017: Prisma connection pool exhaustion in production (random 500s)
+**Found:** Railway deployment — intermittent 500 errors on any DB-touching route
+**Severity:** High — unpredictable failures in production
+**Description:** `db.ts` only persisted the Prisma singleton in development (`if (process.env.NODE_ENV !== "production")`). In production, every request created a new `PrismaClient` + `PrismaPg` adapter + pg connection pool (10 connections each). Railway's Postgres connection limit was hit quickly.
+**Fix:** Removed the environment guard — singleton always persisted in `globalForPrisma`.
+**Status:** Fixed
+
+## Bug 018: Stale activeOrgId in JWT after leaving/deleting last org
+**Found:** Live testing — after leaving or deleting the only org, dashboard showed stale org data or broken state
+**Severity:** High — users stuck with invalid session state
+**Description:** `session.update({})` (empty payload) triggered the JWT `trigger === "update"` branch only when `session.activeOrgId` was present. With no payload, the condition was false and the old `activeOrgId` was never cleared. Users remained with a stale org in their JWT.
+**Fix:** JWT callback now handles `trigger === "update"` with no `activeOrgId` by re-fetching the user's first available org. If none exist, all active org fields are cleared.
+**Status:** Fixed
+
+## Bug 019: No-org state forced users to create an org before checking invites
+**Found:** UX review — new users and users who left all orgs had no path to their invite inbox
+**Severity:** Medium — UX dead end
+**Description:** Dashboard no-org state only showed "Create Organization". Users who had been invited couldn't access /invites without knowing the URL.
+**Fix:** No-org landing page now prominently shows pending invite count and a "Check Invites" button. Create org is secondary. Sign out always visible.
+**Status:** Fixed

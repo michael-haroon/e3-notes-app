@@ -89,3 +89,20 @@ FileUploader renders its own "Attachments" `<h3>`. NoteDetail also wrapped it wi
 5. **Session token expiry** — No explicit maxAge set for JWT; default Next-Auth expiry may be too long
 6. **Audit log retention** — No TTL/cleanup policy; table will grow unbounded
 7. **Error messages** — Some error messages may leak internal details (e.g., "Note not found" vs "Forbidden" ambiguity for PRIVATE notes)
+
+## Sessions 4–5 — Production review findings
+
+### DB singleton (db.ts) — CRITICAL BUG FOUND IN PRODUCTION
+The `if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db` guard meant every production request created a fresh connection pool. Standard boilerplate mistake; the guard exists in Next.js docs for dev hot-reload safety but must not be in production. Caused random 500s under concurrent Railway traffic.
+
+### Permission model (permissions.ts/canWriteNote) — SECOND CORRECTION
+First correction allowed admin/owner to edit. User clarified during live testing: admin/owner can delete (moderation) but cannot edit (content ownership). `canWriteNote` is now strictly author-only. This is the correct interpretation and matches how most collaborative tools work.
+
+### JWT update() with empty payload
+`session.update({})` without `activeOrgId` was silently a no-op. The JWT callback had `if (trigger === "update" && session?.activeOrgId)` which required a specific org to be passed. The empty-payload case should re-fetch memberships, but wasn't handled. This was invisible in testing since test users always had multiple orgs.
+
+### What I'd review next with more time
+1. **Rate limiting** — no rate limiting on invite creation or member removal
+2. **Audit log completeness** — `removeMember` audit log uses `self: true` metadata incorrectly (copied from `leaveOrg`); should be the target user's context
+3. **Note ownership on member removal** — when a member is removed, their notes remain in the org (accessible to admin/owner). Whether this is correct is a product decision not yet documented.
+4. **Search vector for updated notes** — seed script updates note content via `db.note.update()` but the FTS trigger fires on UPDATE so vectors should be current; worth verifying with a direct SQL query in production.

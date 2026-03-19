@@ -117,3 +117,15 @@ Diff API uses `diff` npm package, returns unified patch format.
 | Tags per org | 8 shared + 2 org-exclusive = 10 |
 
 Login to test as any user: `user1@example.com` / `password123`
+
+## Session 5 — Remove member, permission corrections, production fixes
+
+**Changes:**
+- `removeMember` action: admin/owner can remove any member; prevents removing last owner; separate from `leaveOrg` (self-removal)
+- OrgSettings: Remove button appears next to each member for admin/owner, hidden for self (use Leave Org instead)
+- `canWriteNote` corrected to author-only — admin/owner can delete but not edit others' notes
+- Edit button hidden for non-authors; direct URL access to edit page redirects non-authors
+- DB singleton fix: Prisma singleton now always persisted (was dev-only, caused production connection pool exhaustion)
+- JWT fix: `session.update({})` now re-fetches org memberships; stale activeOrgId cleared when last org is left/deleted
+- No-org landing page: shows invites count prominently; users not forced to create org before checking inbox
+- Invite error message: "User doesn't exist!" with clearer guidance

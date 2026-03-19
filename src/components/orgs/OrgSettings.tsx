@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { inviteMember, leaveOrg, deleteOrg } from "@/actions/orgs";
+import { inviteMember, leaveOrg, deleteOrg, removeMember } from "@/actions/orgs";
 import { Role } from "@/generated/prisma/enums";
 
 type Member = {
@@ -46,6 +46,7 @@ export function OrgSettings({
   const [leaving, setLeaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [dangerError, setDangerError] = useState("");
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const canInvite = currentRole === Role.ADMIN || currentRole === Role.OWNER;
 
@@ -62,6 +63,19 @@ export function OrgSettings({
       setError(err instanceof Error ? err.message : "Invite failed");
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleRemoveMember(targetUserId: string, targetName: string) {
+    if (!confirm(`Remove ${targetName} from ${org.name}?`)) return;
+    setRemovingId(targetUserId);
+    try {
+      await removeMember(org.id, targetUserId);
+      router.refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to remove member");
+    } finally {
+      setRemovingId(null);
     }
   }
 
@@ -123,13 +137,24 @@ export function OrgSettings({
                 </p>
                 <p className="text-xs text-gray-500">{m.user.email}</p>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                m.role === Role.OWNER ? "bg-yellow-100 text-yellow-700" :
-                m.role === Role.ADMIN ? "bg-blue-100 text-blue-700" :
-                "bg-gray-100 text-gray-600"
-              }`}>
-                {m.role}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  m.role === Role.OWNER ? "bg-yellow-100 text-yellow-700" :
+                  m.role === Role.ADMIN ? "bg-blue-100 text-blue-700" :
+                  "bg-gray-100 text-gray-600"
+                }`}>
+                  {m.role}
+                </span>
+                {canInvite && m.user.id !== currentUserId && (
+                  <button
+                    onClick={() => handleRemoveMember(m.user.id, m.user.name ?? m.user.email)}
+                    disabled={removingId === m.user.id}
+                    className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                  >
+                    {removingId === m.user.id ? "..." : "Remove"}
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
