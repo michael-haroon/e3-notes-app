@@ -41,6 +41,10 @@ export default async function DashboardPage() {
   const role = (session.activeOrgRole ?? "MEMBER") as Role;
   const isPrivileged = isAtLeast(role, Role.ADMIN);
 
+  const pendingInvites = await db.orgInvite.count({
+    where: { email: session.user.email, usedAt: null, expiresAt: { gt: new Date() } },
+  });
+
   const notes = await db.note.findMany({
     where: {
       orgId,
@@ -74,6 +78,14 @@ export default async function DashboardPage() {
         <div className="flex items-center gap-3">
           <Link href="/search" className="text-sm text-gray-600 hover:text-gray-900">
             Search
+          </Link>
+          <Link href="/invites" className="relative text-sm text-gray-600 hover:text-gray-900">
+            Invites
+            {pendingInvites > 0 && (
+              <span className="absolute -top-1.5 -right-3 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                {pendingInvites}
+              </span>
+            )}
           </Link>
           <Link href="/notes/new" className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-blue-700">
             New Note

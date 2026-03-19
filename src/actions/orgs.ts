@@ -65,6 +65,16 @@ export async function inviteMember(orgId: string, input: z.infer<typeof inviteSc
     throw new Error("Permission denied: must be ADMIN or OWNER to invite");
   }
 
+  // Only allow inviting users who already have an account
+  const invitedUser = await db.user.findUnique({ where: { email: data.email } });
+  if (!invitedUser) throw new Error("No account found with that email address");
+
+  // Don't invite someone already in the org
+  const existing = await db.orgMember.findUnique({
+    where: { orgId_userId: { orgId, userId: invitedUser.id } },
+  });
+  if (existing) throw new Error("This user is already a member of the org");
+
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const invite = await db.orgInvite.create({
     data: {
