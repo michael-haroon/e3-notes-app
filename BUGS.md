@@ -97,3 +97,9 @@
 **Description:** Had manually inserted into `_prisma_migrations` table but the table may not exist yet when migration runs.
 **Fix:** Removed the manual INSERT. Prisma creates and manages this table automatically via `migrate deploy`.
 **Status:** Fixed
+
+## Bug 015: `Unknown` status for recent note changes
+**Found:** Live review of a note
+**Severity:** Low - user detail issue
+**Description:** For each version (ie. v1, v2,...), the status for them is "Unknown".
+**Status:** Not Fixed
