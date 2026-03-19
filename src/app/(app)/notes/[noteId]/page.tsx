@@ -18,11 +18,12 @@ export default async function NotePage({
     const note = await getNoteWithPermission(params.noteId);
     const role = (session.activeOrgRole ?? "MEMBER") as Role;
     const canEdit = note.authorId === session.user.id || isAtLeast(role, Role.ADMIN);
+    const canDelete = note.authorId === session.user.id || isAtLeast(role, Role.ADMIN);
     return (
       <NoteDetail
         note={note}
-        currentUserId={session.user.id}
         canEdit={canEdit}
+        canDelete={canDelete}
       />
     );
   } catch (err) {

@@ -31,12 +31,12 @@ const visibilityLabels: Record<string, string> = {
 
 export function NoteDetail({
   note,
-  currentUserId,
   canEdit = false,
+  canDelete = false,
 }: {
   note: Note;
-  currentUserId: string;
   canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -48,7 +48,7 @@ export function NoteDetail({
   } | null>(null);
   const [summaryId, setSummaryId] = useState<string | null>(null);
 
-  const isAuthor = note.authorId === currentUserId;
+
   const latestSummary = note.aiSummaries[0];
 
   async function handleDelete() {
@@ -150,7 +150,7 @@ export function NoteDetail({
               >
                 {summarizing ? "..." : "AI Summary"}
               </button>
-              {isAuthor && (
+              {canDelete && (
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
