@@ -6,6 +6,7 @@ import { writeAuditLog } from "@/lib/audit";
 import {
   canReadNote,
   canWriteNote,
+  canChangeVisibility,
   canDeleteNote,
 } from "@/lib/permissions";
 import { Visibility, Role } from "@/generated/prisma";
@@ -110,6 +111,19 @@ export async function updateNote(input: z.infer<typeof updateNoteSchema>) {
     throw new Error("Permission denied");
   }
 
+  // Only the original author can change visibility
+  if (data.visibility !== undefined && !canChangeVisibility({ id: user.id, email: user.email }, noteCtx)) {
+    await writeAuditLog({
+      action: "note.permission_denied",
+      userId: user.id,
+      orgId,
+      resourceId: note.id,
+      resourceType: "note",
+      metadata: { action: "change_visibility" },
+    });
+    throw new Error("Only the original author can change visibility");
+  }
+
   const updated = await db.$transaction(async (tx) => {
     const latestVersion = await tx.noteVersion.findFirst({
       where: { noteId: data.noteId },
@@ -206,6 +220,7 @@ export async function shareNote(noteId: string, shareWithUserId: string) {
   if (!note) throw new Error("Note not found");
   if (note.authorId !== user.id) throw new Error("Only the author can share this note");
   if (note.orgId !== orgId) throw new Error("Note belongs to a different org");
+  if (note.visibility !== Visibility.PRIVATE) throw new Error("Only PRIVATE notes can be shared individually");
 
   // Verify shareWithUserId is a member of the same org
   const targetMembership = await db.orgMember.findUnique({

@@ -50,6 +50,20 @@ Most critical file. Reviewed every function against spec:
 **NextAuth session update flow** — Risk: client could forge `activeOrgId` update.
 Verified: `jwt` callback re-validates org membership in DB when `trigger === "update"`. If user is not a member of the requested org, the token is not updated.
 
+## Session 3 — Permission model, visibility, auth
+
+### canWriteNote vs canChangeVisibility (permissions.ts)
+The original `canWriteNote` allowed ADMIN/OWNER to update any field including `visibility`. An admin editing someone else's PRIVATE note could re-publish it without the author knowing. Fixed by adding `canChangeVisibility` (author-only) and checking it in `updateNote` before applying visibility changes.
+
+### canDeleteNote expanded to ADMIN
+Original: OWNER-only for delete. Corrected to `isAtLeast(role, Role.ADMIN)` so both ADMIN and OWNER can delete any note.
+
+### Search role-awareness
+`searchNotes` now accepts `role`. Admin/Owner skip the visibility filter entirely (see all). Regular members see ORG + own PRIVATE + shares.
+
+### PUBLIC visibility removed from UI
+The app is org-scoped. No endpoint serves notes to unauthenticated users, so PUBLIC was a false expectation. Removed from dropdowns; DB enum kept for backwards compat.
+
 ## Session 2 — Post-Deploy Review Findings
 
 ### Search (src/lib/search.ts) — CRITICAL BUG FOUND

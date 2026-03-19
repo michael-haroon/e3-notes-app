@@ -64,6 +64,19 @@ Diff API uses `diff` npm package, returns unified patch format.
 - NextAuth v5 `UntrustedHost` error in Docker: fixed by `trustHost: true` in auth config + `AUTH_TRUST_HOST=1` in docker-compose.
 - Prisma 7 breaking changes: `@prisma/adapter-pg` now required, `node:` protocol imports needed webpack externals, middleware must use edge-safe auth config.
 
+## Session 3 — Permission model revision + auth fixes
+
+**Changes:**
+- Removed PUBLIC visibility from UI (it was meaningless in a closed org app; DB enum kept for compat)
+- `canReadNote` for PRIVATE: now also allows ADMIN/OWNER (consistent with "admins see all")
+- `canChangeVisibility`: new permission, author-only. Admins can edit content but cannot change visibility of notes they don't own
+- `canDeleteNote`: expanded to include ADMIN (was OWNER-only before)
+- Search (`search.ts`): accepts `role` param; admin/owner skip visibility filter
+- Dashboard: admin/owner see all notes including PRIVATE
+- Signout: replaced HTML form POST (no CSRF) with `SignOutButton` client component
+- Login CSRF: fixed by setting `AUTH_URL` in docker-compose + `trustHost: true` in auth.ts
+- Seed: user1 now in all 3 orgs, user10 in no org, audit log events added
+
 ## Known Decisions / Trade-offs
 
 - Using raw SQL for search (not Prisma queries) — necessary for tsvector + permission filter in one query

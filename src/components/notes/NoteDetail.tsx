@@ -23,7 +23,7 @@ type Note = {
   aiSummaries: { id: string; content: string; accepted: boolean; createdAt: Date }[];
 };
 
-const visibilityLabels: Record<Visibility, string> = {
+const visibilityLabels: Record<string, string> = {
   PUBLIC: "Public",
   ORG: "Org",
   PRIVATE: "Private",

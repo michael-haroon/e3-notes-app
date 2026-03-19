@@ -32,9 +32,8 @@ export function isAtLeast(role: Role, minimum: Role): boolean {
 
 /**
  * Can the user read this note?
- * - PUBLIC: any org member
- * - ORG: any org member
- * - PRIVATE: author or explicit NoteShare entry
+ * - ORG: any org member (including admin/owner)
+ * - PRIVATE: author, explicit NoteShare entry, or admin/owner in the org
  */
 export function canReadNote(
   user: SessionUser,
@@ -42,22 +41,23 @@ export function canReadNote(
   note: NoteContext,
   shares: ShareEntry[] = []
 ): boolean {
-  // Must be a member of the note's org
   if (org.orgId !== note.orgId) return false;
 
   if (note.visibility === Visibility.PRIVATE) {
     if (note.authorId === user.id) return true;
-    return shares.some((s) => s.userId === user.id);
+    if (shares.some((s) => s.userId === user.id)) return true;
+    return isAtLeast(org.role, Role.ADMIN);
   }
 
-  // PUBLIC or ORG — any org member
+  // ORG — any org member
   return true;
 }
 
 /**
- * Can the user write (edit) this note?
+ * Can the user write (edit content/title/tags of) this note?
  * - Author always can
  * - ADMIN or OWNER can edit any note in their org
+ * Note: visibility changes are separately gated by canChangeVisibility.
  */
 export function canWriteNote(
   user: SessionUser,
@@ -70,9 +70,19 @@ export function canWriteNote(
 }
 
 /**
+ * Can the user change the visibility of this note?
+ * Only the original author can change visibility.
+ */
+export function canChangeVisibility(
+  user: SessionUser,
+  note: NoteContext
+): boolean {
+  return note.authorId === user.id;
+}
+
+/**
  * Can the user delete this note?
- * - Author can delete their own note
- * - OWNER can delete any note in their org
+ * - Author, ADMIN, or OWNER can delete any note in their org
  */
 export function canDeleteNote(
   user: SessionUser,
@@ -81,7 +91,7 @@ export function canDeleteNote(
 ): boolean {
   if (org.orgId !== note.orgId) return false;
   if (note.authorId === user.id) return true;
-  return org.role === Role.OWNER;
+  return isAtLeast(org.role, Role.ADMIN);
 }
 
 // ── File permissions ─────────────────────────────────────────────────────────

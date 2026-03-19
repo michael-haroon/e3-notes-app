@@ -21,6 +21,7 @@ type NoteEditorProps =
         content: string;
         visibility: Visibility;
         tagIds: string[];
+        isAuthor: boolean;
       };
       orgTags: Tag[];
     };
@@ -28,6 +29,7 @@ type NoteEditorProps =
 export function NoteEditor(props: NoteEditorProps) {
   const router = useRouter();
   const isEdit = props.mode === "edit";
+  const isAuthor = props.mode === "create" || props.note.isAuthor;
 
   const [title, setTitle] = useState(isEdit ? props.note.title : "");
   const [content, setContent] = useState(isEdit ? props.note.content : "");
@@ -154,18 +156,19 @@ export function NoteEditor(props: NoteEditorProps) {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Visibility</label>
-              <select
-                value={visibility}
-                onChange={(e) => setVisibility(e.target.value as Visibility)}
-                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value={Visibility.ORG}>Org (all members)</option>
-                <option value={Visibility.PUBLIC}>Public (anyone)</option>
-                <option value={Visibility.PRIVATE}>Private (only me)</option>
-              </select>
-            </div>
+            {isAuthor && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Visibility</label>
+                <select
+                  value={visibility}
+                  onChange={(e) => setVisibility(e.target.value as Visibility)}
+                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={Visibility.ORG}>Org (all members)</option>
+                  <option value={Visibility.PRIVATE}>Private (only me + shared)</option>
+                </select>
+              </div>
+            )}
 
             {props.orgTags.length > 0 && (
               <div>

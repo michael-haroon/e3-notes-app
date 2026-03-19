@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { searchNotes } from "@/lib/search";
 import { writeAuditLog } from "@/lib/audit";
+import { Role } from "@/generated/prisma";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
     query,
     orgId,
     userId: session.user.id,
+    role: (session.activeOrgRole ?? "MEMBER") as Role,
     tagNames: tags.length > 0 ? tags : undefined,
     limit,
     offset,

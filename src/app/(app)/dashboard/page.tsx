@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { OrgSwitcher } from "@/components/orgs/OrgSwitcher";
 import { NoteList } from "@/components/notes/NoteList";
-import { Visibility } from "@/generated/prisma";
+import { SignOutButton } from "@/components/auth/SignOutButton";
+import { Visibility, Role } from "@/generated/prisma";
+import { isAtLeast } from "@/lib/permissions";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -36,14 +38,22 @@ export default async function DashboardPage() {
     );
   }
 
+  const role = (session.activeOrgRole ?? "MEMBER") as Role;
+  const isPrivileged = isAtLeast(role, Role.ADMIN);
+
   const notes = await db.note.findMany({
     where: {
       orgId,
-      OR: [
-        { visibility: { in: [Visibility.PUBLIC, Visibility.ORG] } },
-        { authorId: userId },
-        { shares: { some: { userId } } },
-      ],
+      // Admin/Owner see all notes; members see ORG + their own PRIVATE + shared with them
+      ...(isPrivileged
+        ? {}
+        : {
+            OR: [
+              { visibility: Visibility.ORG },
+              { authorId: userId },
+              { shares: { some: { userId } } },
+            ],
+          }),
     },
     include: {
       author: { select: { id: true, name: true, email: true } },
@@ -74,11 +84,7 @@ export default async function DashboardPage() {
           <span className="text-sm text-gray-600">
             {session.user.name ?? session.user.email}
           </span>
-          <form action="/api/auth/signout" method="POST">
-            <button type="submit" className="text-sm text-gray-500 hover:text-gray-700">
-              Sign out
-            </button>
-          </form>
+          <SignOutButton />
         </div>
       </nav>
 

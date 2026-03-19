@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import { Visibility } from "@/generated/prisma";
+import { Visibility, Role } from "@/generated/prisma";
+import { isAtLeast } from "@/lib/permissions";
 
 export type SearchResult = {
   id: string;
@@ -24,6 +25,7 @@ export async function searchNotes({
   query,
   orgId,
   userId,
+  role = Role.MEMBER,
   tagNames,
   limit = 20,
   offset = 0,
@@ -31,6 +33,7 @@ export async function searchNotes({
   query: string;
   orgId: string;
   userId: string;
+  role?: Role;
   tagNames?: string[];
   limit?: number;
   offset?: number;
@@ -67,6 +70,14 @@ export async function searchNotes({
     ? `AND n."searchVector" @@ to_tsquery('english', $3)`
     : "";
 
+  // Admin/Owner can see all notes in the org; members see ORG + own PRIVATE + shared
+  const isPrivileged = isAtLeast(role, Role.ADMIN);
+  const visibilityClause = isPrivileged
+    ? "1=1" // no visibility filter — see all
+    : `(n.visibility = 'ORG' OR n."authorId" = $2 OR EXISTS (
+        SELECT 1 FROM note_shares ns WHERE ns."noteId" = n.id AND ns."userId" = $2
+      ))`;
+
   const params: unknown[] = [orgId, userId];
   if (tsQuery) params.push(tsQuery);
   if (tagNames && tagNames.length > 0) params.push(tagNames);
@@ -97,14 +108,7 @@ export async function searchNotes({
     LEFT JOIN tags t ON t.id = nt."tagId"
     WHERE
       n."orgId" = $1
-      AND (
-        n.visibility IN ('PUBLIC', 'ORG')
-        OR n."authorId" = $2
-        OR EXISTS (
-          SELECT 1 FROM note_shares ns
-          WHERE ns."noteId" = n.id AND ns."userId" = $2
-        )
-      )
+      AND ${visibilityClause}
       ${whereClause}
       ${tagFilter}
     GROUP BY n.id, n."authorId", n."orgId", n."createdAt", n."updatedAt", u.name
@@ -117,14 +121,7 @@ export async function searchNotes({
     FROM notes n
     WHERE
       n."orgId" = $1
-      AND (
-        n.visibility IN ('PUBLIC', 'ORG')
-        OR n."authorId" = $2
-        OR EXISTS (
-          SELECT 1 FROM note_shares ns
-          WHERE ns."noteId" = n.id AND ns."userId" = $2
-        )
-      )
+      AND ${visibilityClause}
       ${whereClause}
       ${tagFilter}
   `;

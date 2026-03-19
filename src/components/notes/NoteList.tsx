@@ -14,7 +14,7 @@ type Note = {
   _count: { versions: number; files: number };
 };
 
-const visibilityBadge: Record<Visibility, { label: string; className: string }> = {
+const visibilityBadge: Record<string, { label: string; className: string }> = {
   PUBLIC: { label: "Public", className: "bg-green-100 text-green-700" },
   ORG: { label: "Org", className: "bg-blue-100 text-blue-700" },
   PRIVATE: { label: "Private", className: "bg-gray-100 text-gray-700" },

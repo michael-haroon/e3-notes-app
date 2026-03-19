@@ -7,11 +7,10 @@ import { Visibility } from "@/generated/prisma/enums";
 
 const visibilityOptions = [
   { value: Visibility.ORG, label: "Org", desc: "All org members can view" },
-  { value: Visibility.PUBLIC, label: "Public", desc: "Anyone can view" },
   { value: Visibility.PRIVATE, label: "Private", desc: "Only you + shared users" },
 ];
 
-const visibilityColors: Record<Visibility, string> = {
+const visibilityColors: Record<string, string> = {
   PUBLIC: "bg-green-100 text-green-700",
   ORG: "bg-blue-100 text-blue-700",
   PRIVATE: "bg-gray-100 text-gray-700",

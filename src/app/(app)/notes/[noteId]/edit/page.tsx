@@ -11,6 +11,7 @@ export default async function EditNotePage({
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   if (!session.activeOrgId) redirect("/dashboard");
+  const currentUserId = session.user.id;
 
   const [note, tags] = await Promise.all([
     db.note.findUnique({
@@ -34,6 +35,7 @@ export default async function EditNotePage({
         content: note.content,
         visibility: note.visibility,
         tagIds: note.tags.map((t) => t.tagId),
+        isAuthor: note.authorId === currentUserId,
       }}
       orgTags={tags}
     />
