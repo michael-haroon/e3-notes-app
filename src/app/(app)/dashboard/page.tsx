@@ -22,17 +22,39 @@ export default async function DashboardPage() {
   });
 
   if (!orgId) {
+    const pendingInviteCount = await db.orgInvite.count({
+      where: { email: session.user.email, usedAt: null, expiresAt: { gt: new Date() } },
+    });
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold mb-4">Welcome to TeamNotes</h1>
-          <p className="text-gray-600 mb-6">Create your first organization to get started.</p>
-          <Link
-            href="/orgs/new"
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Create Organization
-          </Link>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md bg-white rounded-xl border p-8 shadow-sm">
+          <h1 className="text-2xl font-bold mb-2">Welcome to TeamNotes</h1>
+          <p className="text-gray-500 mb-8">You are not a member of any organization yet.</p>
+          <div className="flex flex-col gap-3">
+            {pendingInviteCount > 0 && (
+              <Link
+                href="/invites"
+                className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Check Invites
+                <span className="bg-white text-blue-600 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {pendingInviteCount}
+                </span>
+              </Link>
+            )}
+            {pendingInviteCount === 0 && (
+              <Link href="/invites" className="text-sm text-blue-600 hover:underline">
+                Check Invites inbox
+              </Link>
+            )}
+            <Link
+              href="/orgs/new"
+              className="border border-gray-300 text-gray-700 px-6 py-2.5 rounded-lg hover:bg-gray-50 text-sm"
+            >
+              Create a new organization
+            </Link>
+            <SignOutButton />
+          </div>
         </div>
       </div>
     );

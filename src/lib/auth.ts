@@ -34,21 +34,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.activeOrgName = membership.org.name;
         }
       }
-      // Allow client to switch active org
-      if (trigger === "update" && session?.activeOrgId) {
-        const membership = await db.orgMember.findUnique({
-          where: {
-            orgId_userId: {
-              orgId: session.activeOrgId,
-              userId: token.userId as string,
-            },
-          },
-          include: { org: true },
-        });
-        if (membership) {
-          token.activeOrgId = membership.orgId;
-          token.activeOrgRole = membership.role;
-          token.activeOrgName = membership.org.name;
+      if (trigger === "update") {
+        if (session?.activeOrgId) {
+          // Switch to a specific org (org switcher / accept invite)
+          const membership = await db.orgMember.findUnique({
+            where: { orgId_userId: { orgId: session.activeOrgId, userId: token.userId as string } },
+            include: { org: true },
+          });
+          if (membership) {
+            token.activeOrgId = membership.orgId;
+            token.activeOrgRole = membership.role;
+            token.activeOrgName = membership.org.name;
+          }
+        } else {
+          // No specific org requested — re-fetch first available org.
+          // Handles leave/delete: clears stale activeOrgId if user has no orgs left.
+          const membership = await db.orgMember.findFirst({
+            where: { userId: token.userId as string },
+            include: { org: true },
+            orderBy: { joinedAt: "asc" },
+          });
+          token.activeOrgId = membership?.orgId;
+          token.activeOrgRole = membership?.role;
+          token.activeOrgName = membership?.org.name;
         }
       }
       return token;
