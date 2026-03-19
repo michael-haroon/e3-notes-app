@@ -295,7 +295,7 @@ export async function getNoteWithPermission(noteId: string) {
     include: {
       author: { select: { id: true, name: true, email: true } },
       tags: { include: { tag: true } },
-      shares: true,
+      shares: { include: { user: { select: { id: true, name: true, email: true } } } },
       versions: { orderBy: { version: "desc" }, take: 10 },
       files: true,
       aiSummaries: { orderBy: { createdAt: "desc" }, take: 1 },

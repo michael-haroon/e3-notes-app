@@ -6,6 +6,7 @@ import { deleteNote } from "@/actions/notes";
 import { useRouter } from "next/navigation";
 import { Visibility } from "@/generated/prisma/enums";
 import { FileUploader } from "@/components/notes/FileUploader";
+import { SharePanel } from "@/components/notes/SharePanel";
 
 type Note = {
   id: string;
@@ -21,6 +22,7 @@ type Note = {
   versions: { id: string; version: number; createdAt: Date; author?: { name: string | null; email: string } }[];
   files: { id: string; filename: string; mimeType: string; size: number }[];
   aiSummaries: { id: string; content: string; accepted: boolean; createdAt: Date }[];
+  shares: { userId: string; user: { id: string; name: string | null; email: string } }[];
 };
 
 const visibilityLabels: Record<string, string> = {
@@ -33,10 +35,14 @@ export function NoteDetail({
   note,
   canEdit = false,
   canDelete = false,
+  isAuthor = false,
+  orgMembers = [],
 }: {
   note: Note;
   canEdit?: boolean;
   canDelete?: boolean;
+  isAuthor?: boolean;
+  orgMembers?: { userId: string; user: { id: string; name: string | null; email: string } }[];
 }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -259,6 +265,15 @@ export function NoteDetail({
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Sharing (PRIVATE notes, author only) */}
+          {note.visibility === Visibility.PRIVATE && isAuthor && (
+            <SharePanel
+              noteId={note.id}
+              shares={note.shares}
+              orgMembers={orgMembers}
+            />
           )}
 
           {/* Files */}

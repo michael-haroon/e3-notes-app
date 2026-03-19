@@ -5,6 +5,7 @@ import Link from "next/link";
 import { NoteDetail } from "@/components/notes/NoteDetail";
 import { isAtLeast } from "@/lib/permissions";
 import { Role } from "@/generated/prisma";
+import { db } from "@/lib/db";
 
 export default async function NotePage({
   params,
@@ -17,13 +18,27 @@ export default async function NotePage({
   try {
     const note = await getNoteWithPermission(params.noteId);
     const role = (session.activeOrgRole ?? "MEMBER") as Role;
-    const canEdit = note.authorId === session.user.id || isAtLeast(role, Role.ADMIN);
-    const canDelete = note.authorId === session.user.id || isAtLeast(role, Role.ADMIN);
+    const isAuthor = note.authorId === session.user.id;
+    const canEdit = isAuthor || isAtLeast(role, Role.ADMIN);
+    const canDelete = isAuthor || isAtLeast(role, Role.ADMIN);
+
+    // Load org members for the share panel (only when author + private)
+    const orgMembers =
+      isAuthor && note.visibility === "PRIVATE" && session.activeOrgId
+        ? await db.orgMember.findMany({
+            where: { orgId: session.activeOrgId },
+            include: { user: { select: { id: true, name: true, email: true } } },
+            orderBy: { joinedAt: "asc" },
+          }).then((ms) => ms.filter((m) => m.userId !== session.user.id))
+        : [];
+
     return (
       <NoteDetail
         note={note}
         canEdit={canEdit}
         canDelete={canDelete}
+        isAuthor={isAuthor}
+        orgMembers={orgMembers}
       />
     );
   } catch (err) {
