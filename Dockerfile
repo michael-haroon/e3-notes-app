@@ -10,6 +10,7 @@ COPY prisma.config.ts ./
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm prisma generate
+RUN echo 'export * from "./client"; export { PrismaClient } from "./client";' > src/generated/prisma/index.ts
 
 FROM base AS builder
 
