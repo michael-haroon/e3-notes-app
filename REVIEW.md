@@ -50,7 +50,23 @@ Most critical file. Reviewed every function against spec:
 **NextAuth session update flow** — Risk: client could forge `activeOrgId` update.
 Verified: `jwt` callback re-validates org membership in DB when `trigger === "update"`. If user is not a member of the requested org, the token is not updated.
 
-## What I'd Review Next With More Time
+## Session 2 — Post-Deploy Review Findings
+
+### Search (src/lib/search.ts) — CRITICAL BUG FOUND
+The raw SQL used snake_case column names (`n.author_id`, `n.org_id`) but Prisma's `@@map` annotation only remaps the table name. Individual columns are created with camelCase names matching the schema field names. The production query failed with `column n.author_id does not exist` on every search request.
+
+**Lesson:** Raw SQL in Prisma projects must use the actual DB column names — verify against the migration SQL, not the Prisma schema field names.
+
+### NoteDetail.tsx — Duplicate Header
+FileUploader renders its own "Attachments" `<h3>`. NoteDetail also wrapped it with another `<h3>Attachments</h3>`. Visual bug, easy to miss in code review but immediately obvious in the UI.
+
+### Audit Log Page — ID Truncation
+`resourceId.slice(0, 8)` made IDs unverifiable. Changed to show full CUID.
+
+### Org Creation Flow — JWT Not Refreshed
+`createOrg()` creates the org in DB but the JWT session still has `activeOrgId=undefined`. The fix (`session.update({ activeOrgId })`) was needed in the page component, not the server action — because the server action can't trigger client-side session updates directly.
+
+### What I'd Review Next With More Time
 
 1. **Integration tests** — The unit tests cover permissions, but integration tests for cross-org search isolation would give more confidence
 2. **Rate limiting** — AI summary endpoint has no rate limiting; could be abused

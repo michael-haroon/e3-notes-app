@@ -56,3 +56,31 @@ Six feature branches ran simultaneously after MVP commit:
 - Verified FTS trigger handles both INSERT and UPDATE
 - Confirmed file download proxy never exposes storageKey
 - Checked audit log writes on permission denials
+
+## Session 2 — Post-Deploy Debugging (Prisma 7 + Docker)
+
+**What the agent got wrong / had to iterate on:**
+
+1. **Prisma 7 webpack incompatibility** — Agent initially just added `serverExternalPackages` to `next.config.mjs` which is a Next.js 15 API. In Next.js 14, the correct key is `experimental.serverComponentsExternalPackages`. Even then, since the Prisma client was generated into `src/generated/prisma` (local code), webpack bundled it and hit `node:crypto` errors. Final fix: webpack externals function for `node:` scheme.
+
+2. **Middleware edge runtime crash** — Agent failed to anticipate that Next.js middleware runs in the Edge runtime, which has no Node.js APIs. Importing `src/lib/auth.ts` (which imports Prisma via `db.ts`) caused `Native module not found: path`. Required splitting into `auth.config.ts` (edge-safe, no DB) + keeping full `auth.ts` for server components. Took 3 attempts.
+
+3. **Prisma 7 constructor requires driver adapter** — Agent initially used `new PrismaClient()` with no args, then tried passing `{ log: [...] }`. Both failed because Prisma 7 mandates either `adapter` or `accelerateUrl`. Required installing `@prisma/adapter-pg` + `pg`.
+
+4. **Docker entrypoint prisma CLI** — First attempt used `npx prisma migrate deploy` which downloaded prisma at runtime but couldn't resolve `prisma/config`. Second attempt used `node_modules/prisma/build/index.js` directly. Final approach: install prisma + @prisma/engines in the runner stage via `pnpm add`.
+
+5. **Raw SQL snake_case vs camelCase** — Agent wrote `n.author_id`, `n.org_id` etc. in the search SQL. Prisma's `@@map` only renames the TABLE, not individual columns. The DB stores them as camelCase (`"authorId"`, `"orgId"`). Complete search failure in production until this was caught by live testing.
+
+6. **NextAuth v5 UntrustedHost** — Agent didn't add `trustHost: true` to the auth config. Required both `trustHost: true` in `authConfig` and `AUTH_TRUST_HOST=1` in docker-compose.
+
+7. **Session JWT not refreshed after org creation** — After `createOrg()`, the JWT still had `activeOrgId=undefined`. Agent had `router.refresh()` but not `session.update({ activeOrgId })`. The dashboard showed "Create your first organization" even though the org existed.
+
+**Approaches that failed:**
+- `stash pop` onto commit 1 to apply all fixes at once — caused massive merge conflicts because stash was created from commit 4
+- `serverExternalPackages` at top-level in next.config.mjs (Next.js 14 only supports it under `experimental`)
+- `sed` to edit files with multiline content — inserted literal `\n` characters instead of newlines
+- `printf` with `!` in shebang — zsh history expansion mangled the `#!/bin/sh` to `#\!/bin/sh`
+
+**What I'd trust agents with vs. not:**
+- Trust: boilerplate CRUD, UI components, migration SQL structure
+- Don't trust: framework-version-specific config (always verify against changelogs), raw SQL with ORM-generated schemas, edge vs. server runtime boundaries

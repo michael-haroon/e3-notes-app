@@ -69,4 +69,23 @@ Diff API uses `diff` npm package, returns unified patch format.
 - Using raw SQL for search (not Prisma queries) — necessary for tsvector + permission filter in one query
 - NextAuth v5 beta — breaking changes from v4, session type augmentation needed
 - MinIO for local dev, env-var switchable to AWS S3 for production
-- Seed creates 10k notes in batches of 100 to avoid memory issues
+- Seed creates 10k notes sequentially (one per loop iteration) — slower but avoids OOM from large Promise.all batches
+- Seed file records use placeholder storageKeys — files won't download but metadata exists for review
+- Prisma 7 `@@map` only remaps table names; column names stay camelCase as written in schema — raw SQL must use quoted camelCase identifiers
+
+## Seed Data Structure (for review)
+
+| Metric | Value |
+|--------|-------|
+| Users | 10 (user1-10@example.com / password123) |
+| Orgs | 3 (Acme, Beta, Gamma — overlapping membership) |
+| Notes | ~10,000 distributed across orgs |
+| Visibility split | ~60% ORG, 20% PUBLIC, 20% PRIVATE |
+| Notes with 2+ versions | 25% (every 4th) |
+| Notes with 3 versions | 5% (every 20th) |
+| AI summaries | 5% of notes (every 20th) |
+| File records | 2% of notes (every 50th) |
+| NoteShare entries | 60+ (PRIVATE notes shared with org members) |
+| Tags per org | 8 shared + 2 org-exclusive = 10 |
+
+Login to test as any user: `user1@example.com` / `password123`
