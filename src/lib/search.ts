@@ -48,21 +48,23 @@ export async function searchNotes({
     .filter(Boolean)
     .join(" & ");
 
+  // NOTE: Prisma migration creates camelCase column names (@@map remaps table only).
+  // All column refs in raw SQL must use double-quoted camelCase identifiers.
   const tagFilter =
     tagNames && tagNames.length > 0
       ? `AND EXISTS (
-          SELECT 1 FROM note_tags nt
-          JOIN tags t ON t.id = nt.tag_id
-          WHERE nt.note_id = n.id AND t.name = ANY($4::text[]) AND t.org_id = $1
+          SELECT 1 FROM note_tags nt2
+          JOIN tags t2 ON t2.id = nt2."tagId"
+          WHERE nt2."noteId" = n.id AND t2.name = ANY($4::text[]) AND t2."orgId" = $1
         )`
       : "";
 
   const rankExpr = tsQuery
-    ? `ts_rank(n.search_vector, to_tsquery('english', $3))`
+    ? `ts_rank(n."searchVector", to_tsquery('english', $3))`
     : "1.0";
 
   const whereClause = tsQuery
-    ? `AND n.search_vector @@ to_tsquery('english', $3)`
+    ? `AND n."searchVector" @@ to_tsquery('english', $3)`
     : "";
 
   const params: unknown[] = [orgId, userId];
@@ -79,34 +81,34 @@ export async function searchNotes({
       n.title,
       n.content,
       n.visibility,
-      n.author_id AS "authorId",
+      n."authorId",
       u.name AS "authorName",
-      n.org_id AS "orgId",
-      n.created_at AS "createdAt",
-      n.updated_at AS "updatedAt",
+      n."orgId",
+      n."createdAt",
+      n."updatedAt",
       ${rankExpr} AS rank,
       COALESCE(
         array_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL),
         ARRAY[]::text[]
       ) AS tags
     FROM notes n
-    JOIN users u ON u.id = n.author_id
-    LEFT JOIN note_tags nt ON nt.note_id = n.id
-    LEFT JOIN tags t ON t.id = nt.tag_id
+    JOIN users u ON u.id = n."authorId"
+    LEFT JOIN note_tags nt ON nt."noteId" = n.id
+    LEFT JOIN tags t ON t.id = nt."tagId"
     WHERE
-      n.org_id = $1
+      n."orgId" = $1
       AND (
         n.visibility IN ('PUBLIC', 'ORG')
-        OR n.author_id = $2
+        OR n."authorId" = $2
         OR EXISTS (
           SELECT 1 FROM note_shares ns
-          WHERE ns.note_id = n.id AND ns.user_id = $2
+          WHERE ns."noteId" = n.id AND ns."userId" = $2
         )
       )
       ${whereClause}
       ${tagFilter}
-    GROUP BY n.id, u.name
-    ORDER BY rank DESC, n.updated_at DESC
+    GROUP BY n.id, n."authorId", n."orgId", n."createdAt", n."updatedAt", u.name
+    ORDER BY rank DESC, n."updatedAt" DESC
     LIMIT ${limitParam} OFFSET ${offsetParam}
   `;
 
@@ -114,13 +116,13 @@ export async function searchNotes({
     SELECT COUNT(DISTINCT n.id) AS total
     FROM notes n
     WHERE
-      n.org_id = $1
+      n."orgId" = $1
       AND (
         n.visibility IN ('PUBLIC', 'ORG')
-        OR n.author_id = $2
+        OR n."authorId" = $2
         OR EXISTS (
           SELECT 1 FROM note_shares ns
-          WHERE ns.note_id = n.id AND ns.user_id = $2
+          WHERE ns."noteId" = n.id AND ns."userId" = $2
         )
       )
       ${whereClause}
