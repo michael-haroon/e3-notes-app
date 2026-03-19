@@ -131,7 +131,7 @@ export default async function AuditPage() {
                       )}
                       {log.resourceId && (
                         <span className="ml-1 font-mono text-xs text-gray-400">
-                          {log.resourceId.slice(0, 8)}&hellip;
+                          {log.resourceId}
                         </span>
                       )}
                     </td>

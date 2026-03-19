@@ -35,6 +35,27 @@
 **Fix:** `canReadNote` for PRIVATE notes only checks `authorId === user.id` OR share entry exists. Role is not checked.
 **Status:** Correctly implemented, tested in permissions.test.ts
 
+## Bug 007: Duplicate "Attachments" header on note detail page
+**Found:** Live review of note detail page
+**Severity:** Low — visual defect
+**Description:** `NoteDetail.tsx` wrapped `<FileUploader>` with its own `<h3>Attachments</h3>`. `FileUploader` already renders its own "Attachments" heading, producing two headers stacked.
+**Fix:** Removed the outer `<h3>` from `NoteDetail.tsx` (commit: see main history).
+**Status:** Fixed
+
+## Bug 008: Audit log resource ID truncated to 8 chars
+**Found:** Live review of audit log page
+**Severity:** Low — usability issue
+**Description:** `audit/page.tsx` rendered `{log.resourceId.slice(0, 8)}…` making IDs unverifiable.
+**Fix:** Removed the slice, showing the full CUID. IDs are ~25 chars and readable in monospace.
+**Status:** Fixed
+
+## Bug 009: Search raw SQL uses snake_case column names, actual DB has camelCase
+**Found:** Live search test (500 error from PostgreSQL)
+**Severity:** Critical — search entirely broken
+**Description:** `src/lib/search.ts` raw SQL used `n.author_id`, `n.org_id`, `n.created_at`, etc. The Prisma migration creates columns as camelCase (`"authorId"`, `"orgId"`, `"createdAt"`) because Prisma's `@@map` only remaps the table name, not individual column names. PostgreSQL is case-sensitive with unquoted identifiers.
+**Fix:** All snake_case column refs replaced with double-quoted camelCase: `n."authorId"`, `n."orgId"`, `nt."noteId"`, `ns."userId"`, etc. (see fix/search-column-names branch).
+**Status:** Fixed (separate branch, rebased onto main)
+
 ## Bug 006: Missing `_prisma_migrations` table insert
 **Found:** During migration SQL review
 **Severity:** Medium — migrations would reapply on deploy

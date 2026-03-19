@@ -54,6 +54,16 @@ All server actions verify membership before acting.
 Auto-version on every note save via `$transaction`. `NoteVersion.version` is explicit integer.
 Diff API uses `diff` npm package, returns unified patch format.
 
+## Session 2 — Post-Deploy Review Fixes
+
+**Bugs found in live testing:**
+- Duplicate "Attachments" header: NoteDetail wrapped FileUploader with its own h3; FileUploader already has one. Removed outer header.
+- Audit log resource ID truncated at 8 chars (cosmetic). Removed `.slice(0, 8)`.
+- Search broken: raw SQL used snake_case column names (`n.author_id`) but migration created camelCase columns (`"authorId"`). Fixed in `fix/search-column-names` branch.
+- After org creation, JWT still had `activeOrgId=undefined`. Fixed by calling `session.update({ activeOrgId })` in the org creation page.
+- NextAuth v5 `UntrustedHost` error in Docker: fixed by `trustHost: true` in auth config + `AUTH_TRUST_HOST=1` in docker-compose.
+- Prisma 7 breaking changes: `@prisma/adapter-pg` now required, `node:` protocol imports needed webpack externals, middleware must use edge-safe auth config.
+
 ## Known Decisions / Trade-offs
 
 - Using raw SQL for search (not Prisma queries) — necessary for tsvector + permission filter in one query

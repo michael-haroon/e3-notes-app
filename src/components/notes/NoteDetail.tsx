@@ -259,7 +259,6 @@ export function NoteDetail({
 
           {/* Files */}
           <div className="mt-6">
-            <h3 className="font-semibold mb-3">Attachments</h3>
             <FileUploader noteId={note.id} />
           </div>
         </div>
