@@ -2,6 +2,9 @@
 
 Multi-tenant team notes app with full-text search, file attachments, AI summaries, and role-based access control.
 
+## Visit the app
+https://e3-notes-app-production.up.railway.app/dashboard
+
 ## Quick start (Docker)
 
 ```bash
