@@ -1,70 +1,42 @@
-# Dev Branch Improvement Plan
+# Dev Branch — Completed
 
-## Goals
-Improve the TeamNotes app with better UI, dark/light mode, structured error handling, and edge case fixes — all on the `dev` branch. Main branch must not be touched, and Railway containerization must not be broken.
+All work below was completed on the `dev` branch and merged to `main`.
 
-## Tracks
+## What was done
 
-### 1. Dark/Light Mode Toggle
-- Enable `darkMode: 'class'` in `tailwind.config.ts`
-- Create `ThemeProvider` (client component, reads/writes localStorage)
-- Create `ThemeToggle` button component
-- Wrap `layout.tsx` with ThemeProvider, suppress hydration mismatch
-- Update all components to use `dark:` variants
+### UI Redesign (Warm Editorial)
+- **Design system**: teal accent (`#0B7285`), parchment background (`#F6F3EC`), `Lora` serif for headings
+- **Tailwind tokens**: semantic color names (`canvas`, `surface`, `ink`, `dim`, `flame`, etc.) mapped to CSS variables
+- **Dark mode**: `ThemeProvider` persists preference to `localStorage`; all components use `dark:` variants
+- **Sidebar layout**: shared `(app)/layout.tsx` route group layout renders `AppShell` with persistent sidebar for all app pages — no more per-page nav bars
+- **Components**: NoteList, NoteDetail, NoteEditor, OrgSettings, FileUploader, VersionsView, SearchView all redesigned
 
-### 2. Edge Case: Remove Button Visibility
-**Bug:** ADMIN can see "Remove" on OWNER members (they shouldn't be able to remove OWNERs)
-- Fix: show Remove button only when caller has permission to remove that specific member
-  - OWNER can remove anyone (except self if last owner)
-  - ADMIN can only remove MEMBERs and ADMINs (not OWNERs)
-  - MEMBER can only remove self (leave)
+### Auth: NextAuth → Clerk
+- Replaced NextAuth JWT sessions with Clerk
+- Email/password + email OTP + Google + Microsoft sign-in out of the box
+- Email verification required on signup
+- `src/lib/session.ts`: unified session helper — reads Clerk userId, looks up/creates DB user, reads `tn_active_org` cookie
+- `src/actions/session.ts`: `switchActiveOrg()` / `clearActiveOrg()` server actions replace NextAuth `update()`
+- Catch-all auth routes `[[...login]]` / `[[...register]]` for Clerk's path routing
+- `scripts/import-users-to-clerk.ts`: bulk-imports existing DB users into Clerk
 
-### 3. Structured Error Handling
-- Create `src/lib/errors.ts` with typed AppError class
-- All server actions return `{ success, data?, error? }` union instead of throwing
-- Frontend components consume `.error` field instead of catching in try/catch
-- Surface meaningful messages: "This user is not registered" instead of generic errors
+### Bug Fixes
+- **Remove button visibility**: ADMIN no longer sees Remove on OWNER members
+- **`deleteOrg` audit log**: was logging `"org.create"` — corrected to `"org.delete"`
+- **`parseInt` NaN**: search route guards against non-numeric limit/offset
+- **Header injection**: `Content-Disposition` now uses RFC 5987 encoding
+- **Rate limiter memory leak**: purges expired entries on each check
+- **VersionsView**: error state + retry, same-version comparison guard
+- **File size display**: shows MB for files ≥ 1 MB
+- **Production error messages**: server actions return `{ success, error? }` instead of throwing (Next.js strips thrown messages in production)
+- **Clerk signup loop**: `(app)/layout.tsx` uses Clerk `auth()` for redirect guard; DB errors show error page instead of redirecting (which caused `history.replaceState` infinite loop)
+- **Race condition on first login**: concurrent requests inserting new user → unique constraint — caught and retried
+- **`passwordHash NOT NULL`**: schema migration makes it nullable for Clerk-native users
+- **stale test assertions**: `permissions.test.ts` updated to match actual behavior
 
-### 4. UI Polish
-- Better nav: cleaner layout, user avatar/initials dropdown
-- Better spacing throughout (8px grid)
-- Card components: shadows, hover states
-- Loading skeletons for async data
-- Better empty states with icons
-- Better forms: validation feedback inline, not just on submit
-- Toast/notification system for success feedback
-
-### 5. Local Development Setup
-- Create `docker-compose.local.yml` with `NODE_ENV=development`, hot-reload volume mount
-- Create `.env.example` with all required vars documented
-- Development uses local Next.js dev server, only deps (postgres + minio) in Docker
-
-### 6. Form Validation Improvements
-- Client-side validation before API calls
-- Min/max length feedback
-- Email format validation with clear messaging
-- Disabled states while submitting
-
-### 7. Additional Tests
-- Unit tests for new error handling utilities
-- Playwright e2e tests for key flows: login, create note, invite member, remove member
-
-## Files to Change
-- `tailwind.config.ts` — add darkMode
-- `src/app/globals.css` — dark mode CSS vars
-- `src/app/layout.tsx` — add ThemeProvider
-- `src/providers/ThemeProvider.tsx` — NEW
-- `src/components/ThemeToggle.tsx` — NEW
-- `src/components/orgs/OrgSettings.tsx` — fix Remove button, better errors, dark mode
-- `src/app/(app)/dashboard/page.tsx` — better nav, dark mode
-- `src/app/(app)/invites/page.tsx` — dark mode, polish
-- `src/app/(auth)/login/LoginForm.tsx` — dark mode, validation
-- `src/app/(auth)/register/page.tsx` — dark mode, validation
-- `src/components/notes/NoteList.tsx` — dark mode, polish
-- `src/lib/errors.ts` — NEW
-- `docker-compose.local.yml` — NEW
-- `tests/unit/errors.test.ts` — NEW
-- `tests/e2e/` — NEW Playwright tests
-
-## Build Checkpoints
-After each major track, run `pnpm build` and fix errors before proceeding.
+### Infrastructure
+- `docker-compose.local.yml`: spins up only Postgres + MinIO for `pnpm dev`
+- `docker-compose.yml`: added Clerk env vars
+- `prisma/migrations/20260408_add_clerk_id`: adds `clerkId` column, drops `passwordHash NOT NULL`
+- `playwright.config.ts` + `tests/e2e/`: auth, dashboard, orgs test suites
+- Vitest scoped to `tests/unit/**` only
