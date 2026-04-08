@@ -61,6 +61,9 @@ export function NoteList({ notes, currentUserId }: { notes: NoteListNote[]; curr
           <Link
             key={note.id}
             href={`/notes/${note.id}`}
+            data-testid="note-card"
+            data-note-visibility={note.visibility}
+            data-note-author={isOwn ? "You" : (note.author.name ?? note.author.email)}
             className="group flex items-start gap-4 bg-surface border border-[var(--border-color)] rounded-card px-5 py-4 hover:shadow-card hover:border-[var(--border-strong)] transition-all cursor-pointer"
           >
             {/* Left: content */}
@@ -70,7 +73,7 @@ export function NoteList({ notes, currentUserId }: { notes: NoteListNote[]; curr
                   {note.title}
                 </h3>
                 <span className={`text-[11px] px-1.5 py-0.5 rounded-[4px] font-medium shrink-0 ${visTag[note.visibility]}`}>
-                  {visLabel[note.visibility]}
+                  <span data-testid="note-visibility">{visLabel[note.visibility]}</span>
                 </span>
               </div>
               {preview && (
@@ -91,7 +94,7 @@ export function NoteList({ notes, currentUserId }: { notes: NoteListNote[]; curr
 
             {/* Right: meta */}
             <div className="text-right text-[12px] text-muted shrink-0 space-y-1">
-              <p className="text-dim font-medium">{isOwn ? "You" : (note.author.name ?? note.author.email)}</p>
+              <p data-testid="note-author" className="text-dim font-medium">{isOwn ? "You" : (note.author.name ?? note.author.email)}</p>
               <p>{dateLabel}</p>
               {(note._count.versions > 0 || note._count.files > 0) && (
                 <div className="flex items-center gap-2 justify-end">

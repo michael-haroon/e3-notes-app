@@ -167,7 +167,7 @@ export function NoteDetail({
 
         {/* Meta */}
         <div className="flex items-center gap-3 flex-wrap text-[12px] text-dim">
-          <span className={`px-1.5 py-0.5 rounded-[4px] font-medium text-[11px] ${visTag[note.visibility]}`}>
+          <span data-testid="note-detail-visibility" className={`px-1.5 py-0.5 rounded-[4px] font-medium text-[11px] ${visTag[note.visibility]}`}>
             {visLabel[note.visibility]}
           </span>
           <span>by <span className="text-ink font-medium">{note.author.name ?? note.author.email}</span></span>

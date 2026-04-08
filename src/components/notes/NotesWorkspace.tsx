@@ -1,15 +1,22 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Visibility } from "@/generated/prisma/enums";
 import { NoteList, type NoteListNote } from "@/components/notes/NoteList";
+import {
+  createNotesWorkspaceSearchParams,
+  DEFAULT_NOTES_WORKSPACE_FILTERS,
+  filterAndSortNotes,
+  hasActiveNotesWorkspaceFilters,
+  readNotesWorkspaceFilters,
+  type SortOption,
+} from "@/lib/notes-workspace";
 
 type AuthorOption = {
   id: string;
   label: string;
 };
-
-type SortOption = "recent" | "oldest" | "title-asc" | "title-desc";
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: "recent", label: "Recently updated" },
@@ -33,49 +40,64 @@ export function NotesWorkspace({
   authors: AuthorOption[];
   currentUserId: string;
 }) {
-  const [query, setQuery] = useState("");
-  const [selectedAuthorId, setSelectedAuthorId] = useState("");
-  const [selectedVisibility, setSelectedVisibility] = useState<"all" | Visibility>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("recent");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlFilters = useMemo(
+    () => readNotesWorkspaceFilters(new URLSearchParams(searchParams.toString())),
+    [searchParams]
+  );
 
-  const deferredQuery = useDeferredValue(query.trim().toLowerCase());
+  const [query, setQuery] = useState(urlFilters.query);
+  const [selectedAuthorId, setSelectedAuthorId] = useState(urlFilters.authorId);
+  const [selectedVisibility, setSelectedVisibility] = useState<"all" | Visibility>(urlFilters.visibility);
+  const [sortBy, setSortBy] = useState<SortOption>(urlFilters.sortBy);
 
-  const filteredNotes = useMemo(() => {
-    const matches = notes.filter((note) => {
-      const authorLabel = note.author.name ?? note.author.email;
-      const searchableText = [
-        note.title,
-        note.content,
-        authorLabel,
-        ...note.tags.map(({ tag }) => tag.name),
-      ]
-        .join(" ")
-        .toLowerCase();
+  useEffect(() => {
+    setQuery(urlFilters.query);
+    setSelectedAuthorId(urlFilters.authorId);
+    setSelectedVisibility(urlFilters.visibility);
+    setSortBy(urlFilters.sortBy);
+  }, [urlFilters.authorId, urlFilters.query, urlFilters.sortBy, urlFilters.visibility]);
 
-      const matchesQuery = !deferredQuery || searchableText.includes(deferredQuery);
-      const matchesAuthor = !selectedAuthorId || note.authorId === selectedAuthorId;
-      const matchesVisibility =
-        selectedVisibility === "all" || note.visibility === selectedVisibility;
+  const filters = useMemo(
+    () => ({
+      query,
+      authorId: selectedAuthorId,
+      visibility: selectedVisibility,
+      sortBy,
+    }),
+    [query, selectedAuthorId, selectedVisibility, sortBy]
+  );
 
-      return matchesQuery && matchesAuthor && matchesVisibility;
-    });
+  useEffect(() => {
+    const nextParams = createNotesWorkspaceSearchParams({
+      query,
+      authorId: selectedAuthorId,
+      visibility: selectedVisibility,
+      sortBy,
+    }).toString();
+    const currentParams = searchParams.toString();
 
-    return [...matches].sort((a, b) => {
-      switch (sortBy) {
-        case "oldest":
-          return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
-        case "title-asc":
-          return a.title.localeCompare(b.title);
-        case "title-desc":
-          return b.title.localeCompare(a.title);
-        case "recent":
-        default:
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      }
-    });
-  }, [deferredQuery, notes, selectedAuthorId, selectedVisibility, sortBy]);
+    if (nextParams === currentParams) return;
 
-  const hasActiveFilters = !!query || !!selectedAuthorId || selectedVisibility !== "all" || sortBy !== "recent";
+    const nextUrl = nextParams ? `${pathname}?${nextParams}` : pathname;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }, [pathname, query, searchParams, selectedAuthorId, selectedVisibility, sortBy]);
+
+  const filteredNotes = useMemo(() => filterAndSortNotes(notes, filters), [filters, notes]);
+  const hasActiveFilters = hasActiveNotesWorkspaceFilters({
+    query,
+    authorId: selectedAuthorId,
+    visibility: selectedVisibility,
+    sortBy,
+  });
+
+  function resetFilters() {
+    setQuery(DEFAULT_NOTES_WORKSPACE_FILTERS.query);
+    setSelectedAuthorId(DEFAULT_NOTES_WORKSPACE_FILTERS.authorId);
+    setSelectedVisibility(DEFAULT_NOTES_WORKSPACE_FILTERS.visibility);
+    setSortBy(DEFAULT_NOTES_WORKSPACE_FILTERS.sortBy);
+  }
 
   return (
     <div className="space-y-5">
@@ -167,12 +189,7 @@ export function NotesWorkspace({
           {hasActiveFilters && (
             <button
               type="button"
-              onClick={() => {
-                setQuery("");
-                setSelectedAuthorId("");
-                setSelectedVisibility("all");
-                setSortBy("recent");
-              }}
+              onClick={resetFilters}
               className="ui-btn-secondary px-4 py-2 text-[12px]"
             >
               Clear filters
@@ -194,12 +211,7 @@ export function NotesWorkspace({
           <p className="mb-5 text-sm text-dim">Try a different author, visibility, or search phrase.</p>
           <button
             type="button"
-            onClick={() => {
-              setQuery("");
-              setSelectedAuthorId("");
-              setSelectedVisibility("all");
-              setSortBy("recent");
-            }}
+            onClick={resetFilters}
             className="ui-btn-secondary"
           >
             Reset view
