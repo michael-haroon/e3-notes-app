@@ -15,7 +15,8 @@
  * Audit logs: login, note.create, note.update, org.create events
  */
 
-import { PrismaClient, Role, Visibility } from "../src/generated/prisma";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { Role, Visibility } from "../src/generated/prisma/enums";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 

@@ -18,14 +18,14 @@ export default function NewOrgPage() {
     if (name.trim().length < 2) { setError("Name must be at least 2 characters."); return; }
     setLoading(true);
     setError("");
-    try {
-      const result = await createOrg(name.trim());
+    const result = await createOrg(name.trim());
+    if (!result.success) {
+      setError(result.error);
+      setLoading(false);
+    } else {
       await switchActiveOrg(result.orgId);
       router.push("/dashboard");
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create org.");
-      setLoading(false);
     }
   }
 

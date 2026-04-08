@@ -1,11 +1,12 @@
-"use client";
-
-import { SignUp } from "@clerk/nextjs";
-import { useTheme } from "@/providers/ThemeProvider";
+import { Suspense } from "react";
+import LoginForm from "./LoginForm";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
-export default function RegisterPage() {
-  const { theme } = useTheme();
+export default async function LoginPage() {
+  const { userId } = await auth();
+  if (userId) redirect("/dashboard");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
@@ -21,22 +22,9 @@ export default function RegisterPage() {
           </div>
           <span className="font-display font-semibold text-[17px] text-ink">TeamNotes</span>
         </div>
-        <SignUp
-          fallbackRedirectUrl="/dashboard"
-          appearance={{
-            variables: {
-              colorPrimary: theme === "dark" ? "#2BB5CC" : "#0B7285",
-              colorBackground: theme === "dark" ? "#1A1814" : "#FFFFFF",
-              colorText: theme === "dark" ? "#EBE5D6" : "#1A1712",
-              colorTextSecondary: theme === "dark" ? "#9A9180" : "#706A5C",
-              colorInputBackground: theme === "dark" ? "#0D0C0A" : "#F6F3EC",
-              colorInputText: theme === "dark" ? "#EBE5D6" : "#1A1712",
-              colorNeutral: theme === "dark" ? "#9A9180" : "#706A5C",
-              borderRadius: "10px",
-              fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-            },
-          }}
-        />
+        <Suspense fallback={<div className="h-64 bg-surface border border-[var(--border-color)] rounded-card animate-pulse" />}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );

@@ -80,37 +80,53 @@ export function OrgSettings({
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     setInviting(true); setError(""); setInviteToken(null);
-    try {
-      const result = await inviteMember(org.id, { email: inviteEmail, role: inviteRole });
+    const result = await inviteMember(org.id, { email: inviteEmail, role: inviteRole });
+    if (!result.success) {
+      setError(result.error);
+    } else {
       setInviteToken(result.token);
       setInviteEmail("");
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Invite failed.");
-    } finally { setInviting(false); }
+    }
+    setInviting(false);
   }
 
   async function handleRemoveMember(targetUserId: string, targetName: string) {
     if (!confirm(`Remove ${targetName} from ${org.name}?`)) return;
     setRemovingId(targetUserId); setRemoveError("");
-    try { await removeMember(org.id, targetUserId); router.refresh(); }
-    catch (err) { setRemoveError(err instanceof Error ? err.message : "Failed to remove member."); }
-    finally { setRemovingId(null); }
+    const result = await removeMember(org.id, targetUserId);
+    if (!result.success) setRemoveError(result.error);
+    else router.refresh();
+    setRemovingId(null);
   }
 
   async function handleLeave() {
     if (!confirm(`Leave ${org.name}?`)) return;
     setLeaving(true); setDangerError("");
-    try { await leaveOrg(org.id); await clearActiveOrg(); router.push("/dashboard"); router.refresh(); }
-    catch (err) { setDangerError(err instanceof Error ? err.message : "Failed to leave."); setLeaving(false); }
+    const result = await leaveOrg(org.id);
+    if (!result.success) {
+      setDangerError(result.error);
+      setLeaving(false);
+    } else {
+      await clearActiveOrg();
+      router.push("/dashboard");
+      router.refresh();
+    }
   }
 
   async function handleDelete() {
     const confirmation = prompt(`Type "${org.name}" to confirm deletion:`);
     if (confirmation !== org.name) { if (confirmation !== null) alert("Name did not match."); return; }
     setDeleting(true); setDangerError("");
-    try { await deleteOrg(org.id); await clearActiveOrg(); router.push("/dashboard"); router.refresh(); }
-    catch (err) { setDangerError(err instanceof Error ? err.message : "Failed to delete."); setDeleting(false); }
+    const result = await deleteOrg(org.id);
+    if (!result.success) {
+      setDangerError(result.error);
+      setDeleting(false);
+    } else {
+      await clearActiveOrg();
+      router.push("/dashboard");
+      router.refresh();
+    }
   }
 
   const inviteUrl = inviteToken

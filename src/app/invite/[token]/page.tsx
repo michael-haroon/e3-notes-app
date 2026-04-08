@@ -30,17 +30,17 @@ export default async function InvitePage({
     );
   }
 
-  try {
-    const result = await acceptInvite(params.token);
+  const result = await acceptInvite(params.token);
+  if (result.success) {
     await switchActiveOrg(result.orgId);
     redirect("/dashboard");
-  } catch (err) {
+  } else {
     return (
       <div className="min-h-screen flex items-center justify-center bg-canvas">
         <div className="bg-surface border border-[var(--border-color)] rounded-card p-8 text-center max-w-sm shadow-float">
           <h1 className="font-display text-xl font-semibold text-bad mb-2">Error</h1>
           <p className="text-dim text-[13px]">
-            {err instanceof Error ? err.message : "Failed to accept invite"}
+            {result.error}
           </p>
         </div>
       </div>

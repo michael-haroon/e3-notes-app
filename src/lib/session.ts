@@ -39,17 +39,24 @@ export async function getSession(): Promise<AppSession> {
     const email = clerkUser?.emailAddresses?.[0]?.emailAddress;
     if (!email) throw new Error("Clerk user has no email");
 
-    dbUser = await db.user.upsert({
-      where: { email },
-      create: {
-        email,
-        name: clerkUser.fullName ?? null,
-        clerkId,
-      },
-      update: {
-        clerkId, // link existing legacy user → Clerk on first login
-      },
-    });
+    try {
+      dbUser = await db.user.upsert({
+        where: { email },
+        create: { email, name: clerkUser.fullName ?? null, clerkId },
+        update: { clerkId },
+      });
+    } catch {
+      // Race condition: two parallel requests both tried to insert simultaneously.
+      // The other request already created/updated the row — just fetch it.
+      const existing = await db.user.findFirst({
+        where: { OR: [{ clerkId }, { email }] },
+      });
+      if (!existing) throw new Error("Failed to create user record");
+      if (!existing.clerkId) {
+        await db.user.update({ where: { id: existing.id }, data: { clerkId } });
+      }
+      dbUser = { ...existing, clerkId };
+    }
   }
 
   // Read active org from cookie

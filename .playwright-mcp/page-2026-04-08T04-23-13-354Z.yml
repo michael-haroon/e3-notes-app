@@ -1,0 +1,70 @@
+- generic [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e7]:
+          - img [ref=e9]
+          - generic [ref=e11]: TeamNotes
+        - generic [ref=e77]:
+          - combobox [ref=e78] [cursor=pointer]:
+            - option "E2E Test Org" [selected]
+          - img
+        - navigation [ref=e12]:
+          - link "Notes" [ref=e13] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e15]
+            - generic [ref=e17]: Notes
+          - link "Search" [ref=e18] [cursor=pointer]:
+            - /url: /search
+            - img [ref=e20]
+            - generic [ref=e22]: Search
+          - link "Invites" [ref=e23] [cursor=pointer]:
+            - /url: /invites
+            - img [ref=e25]
+            - generic [ref=e27]: Invites
+          - link "Org Settings" [ref=e28] [cursor=pointer]:
+            - /url: /orgs
+            - img [ref=e30]
+            - generic [ref=e32]: Org Settings
+          - link "Audit Log" [ref=e79] [cursor=pointer]:
+            - /url: /audit
+            - img [ref=e81]
+            - generic [ref=e83]: Audit Log
+          - link "New Note" [ref=e85] [cursor=pointer]:
+            - /url: /notes/new
+            - img [ref=e86]
+            - text: New Note
+        - generic [ref=e33]:
+          - generic [ref=e34]:
+            - generic [ref=e35]: E
+            - paragraph [ref=e37]: e2etest_final@example.com
+            - button "Toggle dark mode" [ref=e38] [cursor=pointer]:
+              - img [ref=e39]
+          - button "Sign out" [ref=e41] [cursor=pointer]:
+            - img [ref=e42]
+            - text: Sign out
+    - main [ref=e45]:
+      - generic [ref=e105]:
+        - generic [ref=e106]:
+          - link "Notes" [ref=e107] [cursor=pointer]:
+            - /url: /dashboard
+          - img [ref=e108]
+          - generic [ref=e110]: New Note
+        - heading "New Note" [level=1] [ref=e111]
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - generic [ref=e114]: Title
+            - textbox "Note title" [active] [ref=e115]
+          - generic [ref=e116]:
+            - generic [ref=e117]: Content
+            - textbox "Write your note here…" [ref=e118]
+          - generic [ref=e119]:
+            - generic [ref=e120]: Visibility
+            - generic [ref=e121]:
+              - button "Org — all members" [ref=e122] [cursor=pointer]
+              - button "Private — only me" [ref=e123] [cursor=pointer]
+          - generic [ref=e124]:
+            - button "Create note" [ref=e125] [cursor=pointer]
+            - link "Cancel" [ref=e126] [cursor=pointer]:
+              - /url: /dashboard

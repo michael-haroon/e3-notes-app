@@ -1,4 +1,5 @@
 "use client";
+import { getActionError } from "@/lib/action-error";
 
 import { useState, useEffect } from "react";
 import { DiffViewer } from "./DiffViewer";
@@ -32,7 +33,7 @@ export function VersionsView({ noteId }: { noteId: string }) {
       if (!res.ok) throw new Error(data.error ?? "Failed to load versions");
       setVersions(data.versions ?? []);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Failed to load versions");
+      setLoadError(getActionError(err, "Failed to load versions"));
     } finally {
       setLoading(false);
     }
@@ -55,7 +56,7 @@ export function VersionsView({ noteId }: { noteId: string }) {
       if (!res.ok) throw new Error(data.error ?? "Failed to load diff");
       setDiff(data);
     } catch (err) {
-      setDiffError(err instanceof Error ? err.message : "Failed to compare versions");
+      setDiffError(getActionError(err, "Failed to compare versions"));
     } finally {
       setDiffLoading(false);
     }
@@ -77,7 +78,7 @@ export function VersionsView({ noteId }: { noteId: string }) {
       setRestoreMsg(`Restored to v${version}. A new version was created.`);
       await loadVersions();
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Restore failed");
+      setLoadError(getActionError(err, "Restore failed"));
     } finally {
       setRestoring(null);
     }

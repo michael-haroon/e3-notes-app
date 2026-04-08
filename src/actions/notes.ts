@@ -1,5 +1,10 @@
 "use server";
 
+
+function appError(message: string): Error {
+  return new Error(`APP_ERROR:${message}`);
+}
+
 import { getSessionWithOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
@@ -89,7 +94,7 @@ export async function updateNote(input: z.infer<typeof updateNoteSchema>) {
     where: { id: data.noteId },
     include: { shares: true },
   });
-  if (!note) throw new Error("Note not found");
+  if (!note) throw appError("Note not found");
 
   const noteCtx = {
     authorId: note.authorId,
@@ -106,7 +111,7 @@ export async function updateNote(input: z.infer<typeof updateNoteSchema>) {
       resourceType: "note",
       metadata: { action: "update" },
     });
-    throw new Error("Permission denied");
+    throw appError("Permission denied");
   }
 
   // Only the original author can change visibility
@@ -119,7 +124,7 @@ export async function updateNote(input: z.infer<typeof updateNoteSchema>) {
       resourceType: "note",
       metadata: { action: "change_visibility" },
     });
-    throw new Error("Only the original author can change visibility");
+    throw appError("Only the original author can change visibility");
   }
 
   const updated = await db.$transaction(async (tx) => {
@@ -177,7 +182,7 @@ export async function deleteNote(noteId: string) {
   const { user, orgId, role } = await getSession();
 
   const note = await db.note.findUnique({ where: { id: noteId } });
-  if (!note) throw new Error("Note not found");
+  if (!note) throw appError("Note not found");
 
   const noteCtx = {
     authorId: note.authorId,
@@ -194,7 +199,7 @@ export async function deleteNote(noteId: string) {
       resourceType: "note",
       metadata: { action: "delete" },
     });
-    throw new Error("Permission denied");
+    throw appError("Permission denied");
   }
 
   await db.note.delete({ where: { id: noteId } });
@@ -215,16 +220,16 @@ export async function shareNote(noteId: string, shareWithUserId: string) {
   const { user, orgId } = await getSession();
 
   const note = await db.note.findUnique({ where: { id: noteId } });
-  if (!note) throw new Error("Note not found");
-  if (note.authorId !== user.id) throw new Error("Only the author can share this note");
-  if (note.orgId !== orgId) throw new Error("Note belongs to a different org");
-  if (note.visibility !== Visibility.PRIVATE) throw new Error("Only PRIVATE notes can be shared individually");
+  if (!note) throw appError("Note not found");
+  if (note.authorId !== user.id) throw appError("Only the author can share this note");
+  if (note.orgId !== orgId) throw appError("Note belongs to a different org");
+  if (note.visibility !== Visibility.PRIVATE) throw appError("Only PRIVATE notes can be shared individually");
 
   // Verify shareWithUserId is a member of the same org
   const targetMembership = await db.orgMember.findUnique({
     where: { orgId_userId: { orgId: note.orgId, userId: shareWithUserId } },
   });
-  if (!targetMembership) throw new Error("User is not a member of this org");
+  if (!targetMembership) throw appError("User is not a member of this org");
 
   await db.noteShare.upsert({
     where: { noteId_userId: { noteId, userId: shareWithUserId } },
@@ -249,8 +254,8 @@ export async function unshareNote(noteId: string, shareWithUserId: string) {
   const { user, orgId } = await getSession();
 
   const note = await db.note.findUnique({ where: { id: noteId } });
-  if (!note) throw new Error("Note not found");
-  if (note.authorId !== user.id) throw new Error("Only the author can unshare this note");
+  if (!note) throw appError("Note not found");
+  if (note.authorId !== user.id) throw appError("Only the author can unshare this note");
 
   await db.noteShare.deleteMany({
     where: { noteId, userId: shareWithUserId },
@@ -300,7 +305,7 @@ export async function getNoteWithPermission(noteId: string) {
     },
   });
 
-  if (!note) throw new Error("Note not found");
+  if (!note) throw appError("Note not found");
 
   const noteCtx = {
     authorId: note.authorId,
@@ -324,7 +329,7 @@ export async function getNoteWithPermission(noteId: string) {
       resourceType: "note",
       metadata: { action: "read" },
     });
-    throw new Error("Permission denied");
+    throw appError("Permission denied");
   }
 
   await writeAuditLog({

@@ -1,4 +1,5 @@
 "use client";
+import { getActionError } from "@/lib/action-error";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -62,7 +63,7 @@ export function NoteDetail({
       await deleteNote(note.id);
       router.push("/dashboard");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Delete failed");
+      alert(getActionError(err, "Delete failed"));
       setDeleting(false);
     }
   }
@@ -80,7 +81,7 @@ export function NoteDetail({
       setSummaryResult(data.summary.data);
       setSummaryId(data.summary.id);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to generate summary");
+      alert(getActionError(err, "Failed to generate summary"));
     } finally {
       setSummarizing(false);
     }

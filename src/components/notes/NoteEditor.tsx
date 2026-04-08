@@ -1,4 +1,5 @@
 "use client";
+import { getActionError } from "@/lib/action-error";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -48,7 +49,7 @@ export function NoteEditor(props: NoteEditorProps) {
       }
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(getActionError(err, "Save failed"));
       setSaving(false);
     }
   }
@@ -66,7 +67,7 @@ export function NoteEditor(props: NoteEditorProps) {
       if (!res.ok) throw new Error(data.error);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(getActionError(err, "Upload failed"));
     } finally {
       setUploading(false);
     }
