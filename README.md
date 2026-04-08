@@ -2,6 +2,9 @@
 
 Multi-tenant team notes app with full-text search, file attachments, AI summaries, role-based access control, dark mode, and Clerk authentication (email/password, email OTP, Google, Microsoft).
 
+## Visit the app
+https://e3-notes-app-production.up.railway.app/dashboard
+
 ## Quick start (Docker)
 
 ```bash
