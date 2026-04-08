@@ -5,10 +5,13 @@ import { useSyncExternalStore } from "react";
 export type Theme = "light" | "dark";
 
 const STORAGE_KEY = "theme";
+const THEME_SWITCH_FLAG = "themeSwitching";
+const THEME_SWITCH_DURATION_MS = 420;
 const listeners = new Set<() => void>();
 
 let currentTheme: Theme = "light";
 let initialized = false;
+let themeSwitchTimeout: number | null = null;
 
 function notify() {
   listeners.forEach((listener) => listener());
@@ -27,6 +30,32 @@ function applyTheme(theme: Theme, persist = true) {
   }
 
   notify();
+}
+
+function setThemeSwitching(active: boolean) {
+  if (typeof document === "undefined") return;
+
+  if (active) {
+    document.documentElement.dataset[THEME_SWITCH_FLAG] = "true";
+    return;
+  }
+
+  delete document.documentElement.dataset[THEME_SWITCH_FLAG];
+}
+
+function startThemeTransition() {
+  if (typeof window === "undefined") return;
+
+  setThemeSwitching(true);
+
+  if (themeSwitchTimeout) {
+    window.clearTimeout(themeSwitchTimeout);
+  }
+
+  themeSwitchTimeout = window.setTimeout(() => {
+    setThemeSwitching(false);
+    themeSwitchTimeout = null;
+  }, THEME_SWITCH_DURATION_MS);
 }
 
 function resolveInitialTheme(): Theme {
@@ -48,10 +77,12 @@ export function initThemeStore() {
 }
 
 export function setTheme(theme: Theme) {
+  startThemeTransition();
   applyTheme(theme, true);
 }
 
 export function toggleTheme() {
+  startThemeTransition();
   applyTheme(currentTheme === "dark" ? "light" : "dark", true);
 }
 

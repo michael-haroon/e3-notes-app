@@ -84,6 +84,45 @@ body {
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.6;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+html[data-theme-switching="true"] body {
+  overflow: hidden;
+}
+
+html[data-theme-switching="true"] body::before,
+html[data-theme-switching="true"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+html[data-theme-switching="true"] body::before {
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 18%, transparent), transparent 52%),
+    linear-gradient(135deg, color-mix(in srgb, var(--bg-surface) 88%, transparent), color-mix(in srgb, var(--bg) 72%, transparent));
+  backdrop-filter: blur(12px);
+  opacity: 0.92;
+}
+
+html[data-theme-switching="true"] body::after {
+  inset: -20%;
+  background:
+    linear-gradient(
+      112deg,
+      transparent 14%,
+      color-mix(in srgb, var(--accent) 12%, transparent) 34%,
+      color-mix(in srgb, white 56%, transparent) 49%,
+      color-mix(in srgb, var(--accent) 18%, transparent) 62%,
+      transparent 82%
+    );
+  filter: blur(10px);
+  opacity: 0.85;
+  transform: translateX(-38%);
+  animation: theme-sheen 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* ── Focus ─────────────────────────────────────────────── */
@@ -158,6 +197,22 @@ body {
 @keyframes shimmer {
   from { background-position: -200% 0; }
   to   { background-position: 200% 0; }
+}
+
+@keyframes theme-sheen {
+  from {
+    opacity: 0.15;
+    transform: translateX(-38%) skewX(-12deg);
+  }
+
+  35% {
+    opacity: 0.95;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(34%) skewX(-12deg);
+  }
 }
 
 .skeleton {
