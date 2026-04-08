@@ -2,7 +2,7 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { NoteList } from "@/components/notes/NoteList";
+import { NotesWorkspace } from "@/components/notes/NotesWorkspace";
 import { Visibility, Role } from "@/generated/prisma/enums";
 import { isAtLeast } from "@/lib/permissions";
 
@@ -49,27 +49,36 @@ export default async function DashboardPage() {
   const role = (session.activeOrgRole ?? "MEMBER") as Role;
   const isPrivileged = isAtLeast(role, Role.ADMIN);
 
-  const notes = await db.note.findMany({
-    where: {
-      orgId,
-      ...(isPrivileged
-        ? {}
-        : {
-            OR: [
-              { visibility: Visibility.ORG },
-              { authorId: userId },
-              { shares: { some: { userId } } },
-            ],
-          }),
-    },
-    include: {
-      author: { select: { id: true, name: true, email: true } },
-      tags: { include: { tag: true } },
-      _count: { select: { versions: true, files: true } },
-    },
-    orderBy: { updatedAt: "desc" },
-    take: 50,
-  });
+  const [notes, authors] = await Promise.all([
+    db.note.findMany({
+      where: {
+        orgId,
+        ...(isPrivileged
+          ? {}
+          : {
+              OR: [
+                { visibility: Visibility.ORG },
+                { authorId: userId },
+                { shares: { some: { userId } } },
+              ],
+            }),
+      },
+      include: {
+        author: { select: { id: true, name: true, email: true } },
+        tags: { include: { tag: true } },
+        _count: { select: { versions: true, files: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    db.orgMember.findMany({
+      where: { orgId },
+      select: {
+        userId: true,
+        user: { select: { name: true, email: true } },
+      },
+      orderBy: { joinedAt: "asc" },
+    }),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -79,9 +88,7 @@ export default async function DashboardPage() {
             {session.activeOrgName}
           </h1>
           <p className="text-sm text-dim mt-0.5">
-            {notes.length === 0
-              ? "No notes yet"
-              : `${notes.length} note${notes.length !== 1 ? "s" : ""}`}
+            Browse, search, sort, and filter your team&apos;s notes in one place
           </p>
         </div>
         <Link
@@ -95,7 +102,14 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <NoteList notes={notes} currentUserId={userId} />
+      <NotesWorkspace
+        notes={notes}
+        currentUserId={userId}
+        authors={authors.map((member) => ({
+          id: member.userId,
+          label: member.user.name ?? member.user.email,
+        }))}
+      />
     </div>
   );
 }

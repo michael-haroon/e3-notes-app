@@ -22,13 +22,6 @@ function IconNotes() {
     </svg>
   );
 }
-function IconSearch() {
-  return (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} className="w-4 h-4">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-    </svg>
-  );
-}
 function IconMail() {
   return (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} className="w-4 h-4">
@@ -180,7 +173,6 @@ export function AppShell({
       {/* Nav items */}
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         <NavLink href="/dashboard" label="Notes"       icon={<IconNotes />}  active={isActive("/dashboard")} />
-        <NavLink href="/search"    label="Search"      icon={<IconSearch />} active={isActive("/search")} />
         <NavLink href="/invites"   label="Invites"     icon={<IconMail />}   active={isActive("/invites")} badge={pendingInvites || undefined} />
         <NavLink href="/orgs"      label="Org Settings" icon={<IconOrg />}   active={isActive("/orgs")} />
         {isAdmin && (

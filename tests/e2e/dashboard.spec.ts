@@ -22,7 +22,6 @@ test.describe("Dashboard & Notes", () => {
   test("sidebar is visible after login", async ({ page }) => {
     await expect(page.getByText("TeamNotes")).toBeVisible();
     await expect(page.getByRole("link", { name: "Notes" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Search" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Invites" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Org Settings" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
@@ -107,9 +106,12 @@ test.describe("Dashboard & Notes", () => {
     await expect(page.getByRole("heading", { name: "Updated Title" })).toBeVisible();
   });
 
-  test("search page is accessible and functional", async ({ page }) => {
-    await page.goto("/search");
-    await expect(page.getByRole("heading", { name: "Search" })).toBeVisible();
-    await expect(page.getByPlaceholder(/Search notes/)).toBeVisible();
+  test("dashboard has inline search and filters", async ({ page }) => {
+    await page.goto("/dashboard");
+    await expect(page.getByPlaceholder(/Search by title, content, tag, or author/)).toBeVisible();
+    await expect(page.getByLabel("Author")).toBeVisible();
+    await expect(page.getByLabel("Sort")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Org" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Private" })).toBeVisible();
   });
 });

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Visibility } from "@/generated/prisma/enums";
 
-type Note = {
+export type NoteListNote = {
   id: string;
   title: string;
   content: string;
@@ -24,7 +24,7 @@ const visLabel: Record<string, string> = {
   PUBLIC: "Public", ORG: "Org", PRIVATE: "Private",
 };
 
-export function NoteList({ notes, currentUserId }: { notes: Note[]; currentUserId: string }) {
+export function NoteList({ notes, currentUserId }: { notes: NoteListNote[]; currentUserId: string }) {
   if (notes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
