@@ -1,11 +1,11 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useClerk } from "@clerk/nextjs";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState } from "react";
+import { switchActiveOrg } from "@/actions/session";
 
 type Org = {
   orgId: string;
@@ -111,13 +111,13 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { update } = useSession();
+  const { signOut } = useClerk();
   const [switchingOrg, setSwitchingOrg] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   async function handleOrgSwitch(orgId: string) {
     setSwitchingOrg(true);
-    await update({ activeOrgId: orgId });
+    await switchActiveOrg(orgId);
     router.refresh();
     setSwitchingOrg(false);
   }
@@ -202,7 +202,7 @@ export function AppShell({
           <ThemeToggle />
         </div>
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => signOut({ redirectUrl: "/login" })}
           className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-dim hover:text-bad hover:bg-[var(--red-soft)] rounded-[6px] transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>

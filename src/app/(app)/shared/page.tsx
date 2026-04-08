@@ -1,12 +1,12 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSharedWithMe } from "@/actions/notes";
 import { NoteList } from "@/components/notes/NoteList";
 
 export default async function SharedPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  
+  const session = await getSession().catch(() => null); if (!session) redirect("/login");
 
   const notes = await getSharedWithMe();
 

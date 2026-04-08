@@ -1,9 +1,18 @@
-import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth.config";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const { auth } = NextAuth(authConfig);
+const isPublicRoute = createRouteMatcher([
+  "/login(.*)",
+  "/register(.*)",
+  "/invite/(.*)",
+  "/api/auth(.*)",
+  "/api/health",
+]);
 
-export default auth;
+export default clerkMiddleware(async (auth, request) => {
+  if (!isPublicRoute(request)) {
+    await auth.protect();
+  }
+});
 
 export const config = {
   matcher: [

@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { getFileStream, deleteFile } from "@/lib/storage";
 import { canReadFile, isAtLeast } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { fileId: string } }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  let session;
+  try {
+    session = await getSession();
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -94,8 +96,10 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { fileId: string } }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  let session;
+  try {
+    session = await getSession();
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

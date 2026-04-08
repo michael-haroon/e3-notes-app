@@ -1,11 +1,11 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { VersionsView } from "@/components/notes/VersionsView";
 
 export default async function VersionsPage({ params }: { params: { noteId: string } }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  
+  const session = await getSession().catch(() => null); if (!session) redirect("/login");
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">

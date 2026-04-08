@@ -8,7 +8,7 @@ import {
   canChangeRole,
   isAtLeast,
 } from "@/lib/permissions";
-import { Role, Visibility } from "@/generated/prisma";
+import { Role, Visibility } from "@/generated/prisma/enums";
 
 const makeUser = (id: string) => ({ id, email: `${id}@example.com` });
 const makeOrg = (orgId: string, role: Role) => ({ orgId, role });

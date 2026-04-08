@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { SearchView } from "@/components/notes/SearchView";
 
 export default async function SearchPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  
+  const session = await getSession().catch(() => null); if (!session) redirect("/login");
   if (!session.activeOrgId) redirect("/dashboard");
 
   return (

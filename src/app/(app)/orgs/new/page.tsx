@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { createOrg } from "@/actions/orgs";
+import { switchActiveOrg } from "@/actions/session";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function NewOrgPage() {
   const router = useRouter();
-  const { update } = useSession();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,7 +20,7 @@ export default function NewOrgPage() {
     setError("");
     try {
       const result = await createOrg(name.trim());
-      await update({ activeOrgId: result.orgId });
+      await switchActiveOrg(result.orgId);
       router.push("/dashboard");
       router.refresh();
     } catch (err) {

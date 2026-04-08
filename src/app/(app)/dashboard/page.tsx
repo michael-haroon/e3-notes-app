@@ -1,14 +1,14 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { NoteList } from "@/components/notes/NoteList";
-import { Visibility, Role } from "@/generated/prisma";
+import { Visibility, Role } from "@/generated/prisma/enums";
 import { isAtLeast } from "@/lib/permissions";
 
 export default async function DashboardPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  
+  const session = await getSession().catch(() => null); if (!session) redirect("/login");
 
   const orgId = session.activeOrgId;
   const userId = session.user.id;

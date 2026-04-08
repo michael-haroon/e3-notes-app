@@ -1,11 +1,11 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import AcceptInviteButton from "./AcceptInviteButton";
 
 export default async function InvitesPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  
+  const session = await getSession().catch(() => null); if (!session) redirect("/login");
 
   const invites = await db.orgInvite.findMany({
     where: { email: session.user.email, usedAt: null, expiresAt: { gt: new Date() } },

@@ -1,13 +1,17 @@
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
 import { AppShell } from "@/components/layout/AppShell";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 import { isAtLeast } from "@/lib/permissions";
+import { getSession } from "@/lib/session";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  let session;
+  try {
+    session = await getSession();
+  } catch {
+    redirect("/login");
+  }
 
   const [userOrgs, pendingInvites] = await Promise.all([
     db.orgMember.findMany({

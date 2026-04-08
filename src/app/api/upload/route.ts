@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { uploadFile } from "@/lib/storage";
 import { writeAuditLog } from "@/lib/audit";
@@ -7,8 +7,10 @@ import { writeAuditLog } from "@/lib/audit";
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  let session;
+  try {
+    session = await getSession();
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

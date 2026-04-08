@@ -1,4 +1,4 @@
-import { Role, Visibility } from "@/generated/prisma";
+import { Role, Visibility } from "@/generated/prisma/enums";
 
 export type SessionUser = {
   id: string;

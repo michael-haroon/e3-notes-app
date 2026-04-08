@@ -1,19 +1,13 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
 import { canInviteMembers, canChangeRole, canRemoveMember } from "@/lib/permissions";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-
-async function getSession() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session;
-}
 
 export async function createOrg(name: string) {
   const session = await getSession();

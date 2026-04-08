@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { Visibility, Role } from "@/generated/prisma";
+import { Visibility, Role } from "@/generated/prisma/enums";
 import { isAtLeast } from "@/lib/permissions";
 
 export type SearchResult = {

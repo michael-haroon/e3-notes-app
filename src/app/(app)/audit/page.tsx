@@ -1,8 +1,8 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { isAtLeast } from "@/lib/permissions";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 
 const ACTION_COLORS: Record<string, string> = {
   "auth.register":         "bg-[var(--accent-soft)] text-[var(--accent)]",
@@ -35,8 +35,8 @@ function ActionBadge({ action }: { action: string }) {
 }
 
 export default async function AuditPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  
+  const session = await getSession().catch(() => null); if (!session) redirect("/login");
 
   const orgId = session.activeOrgId;
   if (!orgId) redirect("/orgs/new");

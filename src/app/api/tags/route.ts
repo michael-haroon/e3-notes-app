@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let session;
+  try {
+    session = await getSession();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const orgId = session.activeOrgId;
   if (!orgId) return NextResponse.json({ error: "No active org" }, { status: 400 });
 
@@ -16,8 +20,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let session;
+  try {
+    session = await getSession();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const orgId = session.activeOrgId;
   if (!orgId) return NextResponse.json({ error: "No active org" }, { status: 400 });
 

@@ -1,14 +1,13 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { acceptInvite, denyInvite } from "@/actions/orgs";
+import { switchActiveOrg } from "@/actions/session";
 import { useState } from "react";
 
 export default function AcceptInviteButton({
   token, inviteId, orgName,
 }: { token: string; inviteId: string; orgName: string }) {
   const router = useRouter();
-  const { update } = useSession();
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
   const [error, setError] = useState("");
@@ -18,7 +17,7 @@ export default function AcceptInviteButton({
     setError("");
     try {
       const result = await acceptInvite(token);
-      await update({ activeOrgId: result.orgId });
+      await switchActiveOrg(result.orgId);
       router.push("/dashboard");
       router.refresh();
     } catch (err) {

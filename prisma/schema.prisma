@@ -23,7 +23,8 @@ model User {
   id            String      @id @default(cuid())
   email         String      @unique
   name          String?
-  passwordHash  String
+  passwordHash  String?     // nullable — Clerk users have no local password
+  clerkId       String?     @unique // Clerk user ID; null for legacy users pre-Clerk
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 

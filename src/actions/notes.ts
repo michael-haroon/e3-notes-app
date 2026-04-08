@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { getSessionWithOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
 import {
@@ -9,18 +9,16 @@ import {
   canChangeVisibility,
   canDeleteNote,
 } from "@/lib/permissions";
-import { Visibility, Role } from "@/generated/prisma";
+import { Visibility } from "@/generated/prisma/enums";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 async function getSession() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  if (!session.activeOrgId) throw new Error("No active org");
+  const s = await getSessionWithOrg();
   return {
-    user: { id: session.user.id, email: session.user.email, name: session.user.name },
-    orgId: session.activeOrgId,
-    role: (session.activeOrgRole ?? "MEMBER") as Role,
+    user: s.user,
+    orgId: s.activeOrgId,
+    role: s.activeOrgRole,
   };
 }
 

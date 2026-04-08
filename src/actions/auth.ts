@@ -1,18 +1,25 @@
 "use server";
 
+/**
+ * Auth server actions — kept for audit logging and legacy register API route.
+ * Authentication itself is handled by Clerk (login/register pages use Clerk hooks).
+ */
+
 import { db } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { signIn, signOut } from "@/lib/auth";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
 import { headers } from "next/headers";
+import { z } from "zod";
 
 const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(8).optional(),
   name: z.string().min(1).max(100).optional(),
 });
 
+/**
+ * Legacy register — called from the API route for backward compatibility.
+ * Creates a DB user without clerkId; Clerk links it on first login via email match.
+ */
 export async function registerUser(input: z.infer<typeof registerSchema>) {
   const data = registerSchema.parse(input);
   const headersList = await headers();
@@ -21,9 +28,14 @@ export async function registerUser(input: z.infer<typeof registerSchema>) {
   const existing = await db.user.findUnique({ where: { email: data.email } });
   if (existing) throw new Error("Email already in use");
 
-  const passwordHash = await bcrypt.hash(data.password, 12);
+  let passwordHash: string | null = null;
+  if (data.password) {
+    const bcrypt = await import("bcryptjs");
+    passwordHash = await bcrypt.hash(data.password, 12);
+  }
+
   const user = await db.user.create({
-    data: { email: data.email, name: data.name, passwordHash },
+    data: { email: data.email, name: data.name ?? null, passwordHash },
   });
 
   await writeAuditLog({
@@ -36,33 +48,19 @@ export async function registerUser(input: z.infer<typeof registerSchema>) {
   return { success: true, userId: user.id };
 }
 
-export async function loginUser(email: string, password: string) {
-  const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for") ?? undefined;
-
-  try {
-    await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-    await writeAuditLog({
-      action: "auth.login",
-      ipAddress: ip,
-      metadata: { email },
-    });
-    return { success: true };
-  } catch {
-    await writeAuditLog({
-      action: "auth.login_failed",
-      ipAddress: ip,
-      metadata: { email },
-    });
-    throw new Error("Invalid credentials");
-  }
-}
-
-export async function logoutUser() {
-  await signOut({ redirect: false });
-  return { success: true };
+/**
+ * Called (optionally) after Clerk creates a user to eagerly sync them into our DB.
+ * Not required — getSession() will also sync on first login.
+ */
+export async function syncClerkUser(input: {
+  clerkId: string;
+  email: string;
+  name?: string | null;
+}) {
+  const user = await db.user.upsert({
+    where: { email: input.email },
+    create: { email: input.email, name: input.name ?? null, clerkId: input.clerkId },
+    update: { clerkId: input.clerkId },
+  });
+  return { success: true, userId: user.id };
 }

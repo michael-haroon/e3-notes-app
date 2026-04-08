@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { canReadNote, canWriteNote } from "@/lib/permissions";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 import { writeAuditLog } from "@/lib/audit";
 import * as Diff from "diff";
 
@@ -10,8 +10,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { noteId: string } }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  let session;
+  try {
+    session = await getSession();
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -83,8 +85,12 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { noteId: string } }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let session;
+  try {
+    session = await getSession();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { noteId } = params;
   const userId = session.user.id;

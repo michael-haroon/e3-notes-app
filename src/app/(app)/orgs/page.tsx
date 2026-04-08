@@ -1,14 +1,14 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import Link from "next/link";
 import { OrgSettings } from "@/components/orgs/OrgSettings";
 import { isAtLeast } from "@/lib/permissions";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 
 export default async function OrgsPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  
+  const session = await getSession().catch(() => null); if (!session) redirect("/login");
 
   const orgId = session.activeOrgId;
   if (!orgId) redirect("/orgs/new");

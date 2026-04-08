@@ -1,7 +1,7 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { switchActiveOrg } from "@/actions/session";
 
 type OrgMemberWithOrg = {
   orgId: string;
@@ -16,11 +16,10 @@ export function OrgSwitcher({
   orgs: OrgMemberWithOrg[];
   activeOrgId: string | undefined;
 }) {
-  const { update } = useSession();
   const router = useRouter();
 
   async function handleSwitch(orgId: string) {
-    await update({ activeOrgId: orgId });
+    await switchActiveOrg(orgId);
     router.refresh();
   }
 

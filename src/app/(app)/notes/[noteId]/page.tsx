@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect, notFound } from "next/navigation";
 import { getNoteWithPermission } from "@/actions/notes";
 import Link from "next/link";
 import { NoteDetail } from "@/components/notes/NoteDetail";
 import { isAtLeast } from "@/lib/permissions";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 
 export default async function NotePage({
@@ -12,8 +12,8 @@ export default async function NotePage({
 }: {
   params: { noteId: string };
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  
+  const session = await getSession().catch(() => null); if (!session) redirect("/login");
 
   try {
     const note = await getNoteWithPermission(params.noteId);

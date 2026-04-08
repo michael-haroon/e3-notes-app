@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { inviteMember, leaveOrg, deleteOrg, removeMember } from "@/actions/orgs";
+import { clearActiveOrg } from "@/actions/session";
 import { Role } from "@/generated/prisma/enums";
 
 type Member = {
@@ -64,7 +64,6 @@ export function OrgSettings({
   members: Member[]; pendingInvites: Invite[];
 }) {
   const router = useRouter();
-  const { update } = useSession();
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>(Role.MEMBER);
   const [inviting, setInviting] = useState(false);
@@ -102,7 +101,7 @@ export function OrgSettings({
   async function handleLeave() {
     if (!confirm(`Leave ${org.name}?`)) return;
     setLeaving(true); setDangerError("");
-    try { await leaveOrg(org.id); await update({}); router.push("/dashboard"); router.refresh(); }
+    try { await leaveOrg(org.id); await clearActiveOrg(); router.push("/dashboard"); router.refresh(); }
     catch (err) { setDangerError(err instanceof Error ? err.message : "Failed to leave."); setLeaving(false); }
   }
 
@@ -110,7 +109,7 @@ export function OrgSettings({
     const confirmation = prompt(`Type "${org.name}" to confirm deletion:`);
     if (confirmation !== org.name) { if (confirmation !== null) alert("Name did not match."); return; }
     setDeleting(true); setDangerError("");
-    try { await deleteOrg(org.id); await update({}); router.push("/dashboard"); router.refresh(); }
+    try { await deleteOrg(org.id); await clearActiveOrg(); router.push("/dashboard"); router.refresh(); }
     catch (err) { setDangerError(err instanceof Error ? err.message : "Failed to delete."); setDeleting(false); }
   }
 
