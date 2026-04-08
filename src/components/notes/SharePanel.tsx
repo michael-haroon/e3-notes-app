@@ -52,25 +52,25 @@ export function SharePanel({
   }
 
   return (
-    <div className="mt-6 border-t pt-6">
-      <h3 className="font-semibold mb-3 text-sm">Shared with</h3>
+    <div className="mt-6 border-t border-[var(--border-color)] pt-6">
+      <h3 className="mb-3 text-sm font-semibold text-ink">Shared with</h3>
 
       {error && (
-        <p className="text-xs text-red-600 mb-2">{error}</p>
+        <p className="mb-2 rounded-[6px] border border-[var(--red-soft)] bg-bad-soft px-3 py-2 text-xs text-bad">{error}</p>
       )}
 
       {shares.length === 0 && (
-        <p className="text-sm text-gray-400 mb-3">Not shared with anyone yet.</p>
+        <p className="mb-3 text-sm text-muted">Not shared with anyone yet.</p>
       )}
 
-      <div className="space-y-1 mb-4">
+      <div className="mb-4 space-y-1">
         {shares.map((s) => (
-          <div key={s.userId} className="flex items-center justify-between text-sm bg-gray-50 px-3 py-1.5 rounded-lg">
-            <span className="text-gray-700">{s.user.name ?? s.user.email}</span>
+          <div key={s.userId} className="flex items-center justify-between rounded-card border border-[var(--border-color)] bg-canvas px-3 py-1.5 text-sm">
+            <span className="text-ink">{s.user.name ?? s.user.email}</span>
             <button
               onClick={() => handleUnshare(s.userId)}
               disabled={busy === s.userId}
-              className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+              className="text-xs font-medium text-bad hover:opacity-70 disabled:opacity-50"
             >
               {busy === s.userId ? "..." : "Remove"}
             </button>
@@ -80,15 +80,15 @@ export function SharePanel({
 
       {shareable.length > 0 && (
         <div>
-          <p className="text-xs text-gray-500 mb-1">Add access:</p>
+          <p className="mb-1 text-xs text-muted">Add access:</p>
           <div className="space-y-1">
             {shareable.map((m) => (
-              <div key={m.userId} className="flex items-center justify-between text-sm bg-gray-50 px-3 py-1.5 rounded-lg">
-                <span className="text-gray-700">{m.user.name ?? m.user.email}</span>
+              <div key={m.userId} className="flex items-center justify-between rounded-card border border-[var(--border-color)] bg-canvas px-3 py-1.5 text-sm">
+                <span className="text-ink">{m.user.name ?? m.user.email}</span>
                 <button
                   onClick={() => handleShare(m.userId)}
                   disabled={busy === m.userId}
-                  className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  className="text-xs font-medium text-[var(--accent)] hover:opacity-70 disabled:opacity-50"
                 >
                   {busy === m.userId ? "..." : "Share"}
                 </button>

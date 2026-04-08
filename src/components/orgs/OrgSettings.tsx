@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { inviteMember, leaveOrg, deleteOrg, removeMember } from "@/actions/orgs";
 import { clearActiveOrg } from "@/actions/session";
 import { Role } from "@/generated/prisma/enums";
+import { canCallerRemove } from "@/lib/org-settings";
 
 type Member = {
   id: string; role: Role; joinedAt: Date;
@@ -12,13 +13,6 @@ type Member = {
 };
 type Invite = { id: string; email: string; role: Role; token: string; expiresAt: Date };
 type Org = { id: string; name: string; slug: string };
-
-function canCallerRemove(callerRole: Role, callerUserId: string, targetUserId: string, targetRole: Role): boolean {
-  if (callerUserId === targetUserId) return false;
-  if (callerRole === Role.OWNER) return true;
-  if (callerRole === Role.ADMIN) return targetRole === Role.MEMBER;
-  return false;
-}
 
 const rolePill: Record<Role, string> = {
   [Role.OWNER]: "bg-warn-soft text-warn",

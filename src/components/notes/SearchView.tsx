@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Visibility } from "@/generated/prisma/enums";
+import { splitHighlightedText } from "@/lib/search-highlight";
 
 type SearchResult = {
   id: string; title: string; content: string; visibility: Visibility;
@@ -10,23 +11,28 @@ type SearchResult = {
   createdAt: string; updatedAt: string; tags: string[]; rank: number;
 };
 type Tag = { id: string; name: string };
+type AuthorOption = { id: string; label: string };
 
 function highlightMatch(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text;
-  const terms = query.trim().split(/\s+/).filter(Boolean);
-  const pattern = new RegExp(
-    `(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
-    "gi"
+  const parts = splitHighlightedText(text, query);
+  const matcher = new RegExp(
+    `^(?:${query.trim().split(/\s+/).filter(Boolean).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})$`,
+    "i"
   );
-  const parts = text.split(pattern);
   return parts.map((part, i) =>
-    pattern.test(part)
+    matcher.test(part)
       ? <mark key={i} className="bg-warn-soft text-warn rounded-[2px] px-0.5">{part}</mark>
       : part
   );
 }
 
-export function SearchView() {
+const visibilityOptions = [
+  { value: Visibility.ORG, label: "Org" },
+  { value: Visibility.PRIVATE, label: "Private" },
+];
+
+export function SearchView({ authors }: { authors: AuthorOption[] }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -35,6 +41,8 @@ export function SearchView() {
   const [offset, setOffset] = useState(0);
   const [orgTags, setOrgTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedVisibilities, setSelectedVisibilities] = useState<Visibility[]>([]);
+  const [selectedAuthorId, setSelectedAuthorId] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const LIMIT = 20;
@@ -44,14 +52,28 @@ export function SearchView() {
     fetch("/api/tags").then((r) => r.json()).then((d) => setOrgTags(d.tags ?? []));
   }, []);
 
-  const doSearch = useCallback(async (q: string, tags: string[], off: number) => {
-    if (!q.trim() && tags.length === 0) {
+  const doSearch = useCallback(async (
+    q: string,
+    tags: string[],
+    visibilities: Visibility[],
+    authorId: string,
+    off: number
+  ) => {
+    if (!q.trim() && tags.length === 0 && visibilities.length === 0 && !authorId) {
       setResults([]); setSearched(false); setLoading(false); return;
     }
     setLoading(true);
     try {
-      const tagParams = tags.map((t) => `&tag=${encodeURIComponent(t)}`).join("");
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=${LIMIT}&offset=${off}${tagParams}`);
+      const searchParams = new URLSearchParams({
+        q,
+        limit: String(LIMIT),
+        offset: String(off),
+      });
+      for (const tag of tags) searchParams.append("tag", tag);
+      for (const visibility of visibilities) searchParams.append("visibility", visibility);
+      if (authorId) searchParams.append("authorId", authorId);
+
+      const res = await fetch(`/api/search?${searchParams.toString()}`);
       const data = await res.json();
       if (off === 0) setResults(data.results ?? []);
       else setResults((prev) => [...prev, ...(data.results ?? [])]);
@@ -67,12 +89,15 @@ export function SearchView() {
     setQuery(q);
     setOffset(0);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(q, selectedTags, 0), 400);
+    debounceRef.current = setTimeout(() => doSearch(q, selectedTags, selectedVisibilities, selectedAuthorId, 0), 400);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Escape") { setQuery(""); setResults([]); setSearched(false); }
-    if (e.key === "Enter") { if (debounceRef.current) clearTimeout(debounceRef.current); doSearch(query, selectedTags, 0); }
+    if (e.key === "Enter") {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      doSearch(query, selectedTags, selectedVisibilities, selectedAuthorId, 0);
+    }
   }
 
   function toggleTag(tagName: string) {
@@ -82,13 +107,30 @@ export function SearchView() {
     setSelectedTags(next);
     setOffset(0);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(query, next, 0), 100);
+    debounceRef.current = setTimeout(() => doSearch(query, next, selectedVisibilities, selectedAuthorId, 0), 100);
+  }
+
+  function toggleVisibility(visibility: Visibility) {
+    const next = selectedVisibilities.includes(visibility)
+      ? selectedVisibilities.filter((value) => value !== visibility)
+      : [...selectedVisibilities, visibility];
+    setSelectedVisibilities(next);
+    setOffset(0);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(query, selectedTags, next, selectedAuthorId, 0), 100);
+  }
+
+  function handleAuthorChange(authorId: string) {
+    setSelectedAuthorId(authorId);
+    setOffset(0);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(query, selectedTags, selectedVisibilities, authorId, 0), 100);
   }
 
   function loadMore() {
     const newOffset = offset + LIMIT;
     setOffset(newOffset);
-    doSearch(query, selectedTags, newOffset);
+    doSearch(query, selectedTags, selectedVisibilities, selectedAuthorId, newOffset);
   }
 
   return (
@@ -110,7 +152,7 @@ export function SearchView() {
           />
         </div>
         <button
-          onClick={() => doSearch(query, selectedTags, 0)}
+          onClick={() => doSearch(query, selectedTags, selectedVisibilities, selectedAuthorId, 0)}
           disabled={loading}
           className="px-5 py-2.5 bg-[var(--accent)] text-white rounded-card text-[13px] font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors whitespace-nowrap"
         >
@@ -137,12 +179,65 @@ export function SearchView() {
         </div>
       )}
 
+      <div className="flex flex-col gap-3 rounded-card border border-[var(--border-color)] bg-surface p-4 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">Visibility</p>
+          <div className="flex flex-wrap gap-1.5">
+            {visibilityOptions.map((option) => {
+              const active = selectedVisibilities.includes(option.value);
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => toggleVisibility(option.value)}
+                  className={`text-[12px] px-3 py-1 rounded-full border transition-colors ${
+                    active
+                      ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]"
+                      : "bg-surface text-dim border-[var(--border-color)] hover:border-[var(--accent)]"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="min-w-0 md:w-64">
+          <label htmlFor="search-author-filter" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            Author
+          </label>
+          <select
+            id="search-author-filter"
+            value={selectedAuthorId}
+            onChange={(e) => handleAuthorChange(e.target.value)}
+            className="ui-select w-full text-[13px]"
+          >
+            <option value="">All authors</option>
+            {authors.map((author) => (
+              <option key={author.id} value={author.id}>
+                {author.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Results count */}
       {searched && (
         <p className="text-[12px] text-dim">
           {results.length} of {total} result{total !== 1 ? "s" : ""}
           {query && <> for <span className="text-ink font-medium">&quot;{query}&quot;</span></>}
           {selectedTags.length > 0 && <> · tagged {selectedTags.map((t) => `#${t}`).join(", ")}</>}
+          {selectedVisibilities.length > 0 && <> · {selectedVisibilities.map((value) => value.toLowerCase()).join(", ")}</>}
+          {selectedAuthorId && (
+            <>
+              {" "}· by{" "}
+              <span className="text-ink font-medium">
+                {authors.find((author) => author.id === selectedAuthorId)?.label ?? "selected author"}
+              </span>
+            </>
+          )}
         </p>
       )}
 

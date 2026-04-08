@@ -178,8 +178,14 @@ The app uses a **persistent sidebar** with:
 ### Search
 
 - Full-text search across all notes in the active org
-- Filter by tags
+- Filter by tags, visibility, and author
 - Scope follows your role (MEMBERs see their accessible notes only)
+
+### Testing
+
+- `pnpm test` runs the unit suite
+- `pnpm test:e2e` runs Playwright against the local app
+- If the app is already running in Docker on `localhost:3000`, use `PLAYWRIGHT_USE_EXISTING_SERVER=1 pnpm exec playwright test` to reuse it instead of starting a second Next server
 
 ### Audit Log
 
@@ -193,6 +199,7 @@ Available to ADMIN and OWNER at `/audit`. Logs:
 ## Key design decisions
 
 - **OrgId from session cookie, never client** — tenant isolation cannot be bypassed
+- **Secure org cookie only on HTTPS** — local Docker over `http://localhost:3000` can still switch orgs, while Railway keeps secure cookies on HTTPS
 - **File downloads proxied** — MinIO keys never exposed
 - **Author-only edits** — ADMIN/OWNER can delete notes but cannot edit others' content
 - **Invites are in-app** — no email delivery; invites show in `/invites`

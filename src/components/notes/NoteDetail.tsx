@@ -126,7 +126,7 @@ export function NoteDetail({
             {canEdit && (
               <Link
                 href={`/notes/${note.id}/edit`}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium border border-[var(--border-color)] rounded-[7px] text-dim hover:text-ink hover:bg-subtle transition-colors"
+                className="ui-btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[12px]"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" />
@@ -136,7 +136,7 @@ export function NoteDetail({
             )}
             <Link
               href={`/notes/${note.id}/versions`}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium border border-[var(--border-color)] rounded-[7px] text-dim hover:text-ink hover:bg-subtle transition-colors"
+              className="ui-btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[12px]"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -146,7 +146,7 @@ export function NoteDetail({
             <button
               onClick={handleSummarize}
               disabled={summarizing}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium border border-[var(--border-color)] rounded-[7px] text-dim hover:text-ink hover:bg-subtle disabled:opacity-50 transition-colors"
+              className="ui-btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[12px]"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
@@ -157,7 +157,7 @@ export function NoteDetail({
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="px-3 py-1.5 text-[12px] font-medium text-bad bg-bad-soft border border-[var(--red-soft)] rounded-[7px] hover:opacity-80 disabled:opacity-50 transition-colors"
+                className="ui-btn-danger px-3 py-1.5 text-[12px]"
               >
                 {deleting ? "Deleting…" : "Delete"}
               </button>
@@ -195,6 +195,12 @@ export function NoteDetail({
 
       {/* Content */}
       <div className="bg-surface border border-[var(--border-color)] rounded-card px-7 py-6 shadow-card mb-5">
+      <div className="mb-2 flex items-center justify-between gap-3 border-b border-[var(--border-color)] pb-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">Body</span>
+        <span className="text-[11px] text-muted">
+          {note.content.trim() ? `${note.content.trim().split(/\s+/).length} words` : "Empty"}
+        </span>
+      </div>
         <pre className="whitespace-pre-wrap font-sans text-[14px] text-ink leading-[1.75]">
           {note.content || <span className="text-muted italic">No content yet.</span>}
         </pre>
@@ -227,10 +233,10 @@ export function NoteDetail({
             </div>
           )}
           <div className="flex gap-2">
-            <button onClick={() => handleAcceptSummary(true)} className="px-3 py-1.5 bg-[var(--accent)] text-white text-[12px] font-medium rounded-[6px] hover:bg-[var(--accent-hover)] transition-colors">
+            <button onClick={() => handleAcceptSummary(true)} className="ui-btn-primary px-3 py-1.5 text-[12px]">
               Accept
             </button>
-            <button onClick={() => handleAcceptSummary(false)} className="px-3 py-1.5 border border-[var(--border-color)] text-dim text-[12px] font-medium rounded-[6px] hover:bg-subtle transition-colors">
+            <button onClick={() => handleAcceptSummary(false)} className="ui-btn-secondary px-3 py-1.5 text-[12px]">
               Dismiss
             </button>
           </div>

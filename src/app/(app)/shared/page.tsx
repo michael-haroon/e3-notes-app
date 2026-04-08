@@ -11,16 +11,16 @@ export default async function SharedPage() {
   const notes = await getSharedWithMe();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b px-6 py-3 flex items-center gap-4">
-        <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700">
+    <div className="min-h-full bg-canvas">
+      <nav className="flex items-center gap-4 border-b border-[var(--border-color)] bg-surface px-6 py-3">
+        <Link href="/dashboard" className="text-sm text-dim transition-colors hover:text-ink">
           ← Dashboard
         </Link>
-        <span className="text-gray-300">/</span>
-        <span className="text-sm font-medium">Shared with me</span>
+        <span className="text-muted">/</span>
+        <span className="text-sm font-medium text-ink">Shared with me</span>
       </nav>
       <main className="max-w-4xl mx-auto px-6 py-8">
-        <h2 className="text-xl font-semibold mb-6">
+        <h2 className="mb-6 font-display text-2xl font-semibold tracking-tight text-ink">
           Shared with me ({notes.length})
         </h2>
         <NoteList notes={notes} currentUserId={session.user.id} />

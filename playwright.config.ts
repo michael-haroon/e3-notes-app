@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const useExistingServerOnly = process.env.PLAYWRIGHT_USE_EXISTING_SERVER === "1";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
@@ -22,11 +24,15 @@ export default defineConfig({
     },
   ],
 
-  // Start dev server automatically if not already running
-  webServer: {
-    command: "pnpm dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: true,
-    timeout: 60_000,
-  },
+  // Start dev server automatically if not already running.
+  // When Docker or another local instance is already serving the app,
+  // PLAYWRIGHT_USE_EXISTING_SERVER=1 skips spawning a second server.
+  webServer: useExistingServerOnly
+    ? undefined
+    : {
+        command: "pnpm dev",
+        url: "http://localhost:3000",
+        reuseExistingServer: true,
+        timeout: 60_000,
+      },
 });

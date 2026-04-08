@@ -2,11 +2,16 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { shouldUseSecureCookies } from "@/lib/session-cookie";
 
 const COOKIE = "tn_active_org";
+
+const appUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "";
+const useSecureCookies = shouldUseSecureCookies(appUrl, process.env.NODE_ENV);
+
 const COOKIE_OPTS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: useSecureCookies,
   sameSite: "lax" as const,
   path: "/",
   maxAge: 60 * 60 * 24 * 30, // 30 days

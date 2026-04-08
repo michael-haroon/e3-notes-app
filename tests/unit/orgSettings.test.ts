@@ -1,21 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Role } from "../../src/generated/prisma/enums";
-
-/**
- * Mirror of the canCallerRemove logic from OrgSettings.tsx
- * (duplicated here so we can test it independently)
- */
-function canCallerRemove(
-  callerRole: Role,
-  callerUserId: string,
-  targetUserId: string,
-  targetRole: Role
-): boolean {
-  if (callerUserId === targetUserId) return false;
-  if (callerRole === Role.OWNER) return true;
-  if (callerRole === Role.ADMIN) return targetRole === Role.MEMBER;
-  return false;
-}
+import { canCallerRemove } from "@/lib/org-settings";
 
 describe("canCallerRemove", () => {
   const CALLER = "caller-id";

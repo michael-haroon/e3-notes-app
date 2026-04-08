@@ -110,6 +110,41 @@ body {
   font-family: var(--font-lora), Georgia, "Times New Roman", serif;
 }
 
+/* ── Shared UI patterns ───────────────────────────────── */
+@layer components {
+  .ui-card {
+    @apply rounded-card border border-[var(--border-color)] bg-surface shadow-card;
+  }
+
+  .ui-input {
+    @apply rounded-[7px] border border-[var(--border-color)] bg-surface px-3 py-2 text-ink placeholder-muted transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent;
+  }
+
+  .ui-select {
+    @apply rounded-[7px] border border-[var(--border-color)] bg-surface px-3 py-2 text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent;
+  }
+
+  .ui-btn-primary {
+    @apply rounded-card bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50;
+  }
+
+  .ui-btn-secondary {
+    @apply rounded-card border border-[var(--border-color)] px-4 py-2 text-sm font-medium text-dim transition-colors hover:bg-subtle hover:text-ink disabled:opacity-50;
+  }
+
+  .ui-btn-danger {
+    @apply rounded-card border border-[var(--red-soft)] bg-bad-soft px-4 py-2 text-sm font-medium text-bad transition-colors hover:opacity-80 disabled:opacity-50;
+  }
+
+  .ui-pill-accent {
+    @apply rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-medium text-[var(--accent)];
+  }
+
+  .ui-pill-muted {
+    @apply rounded-full bg-subtle px-2.5 py-1 text-xs font-medium text-dim;
+  }
+}
+
 /* ── Animation ─────────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(8px); }

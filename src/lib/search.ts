@@ -27,6 +27,8 @@ export async function searchNotes({
   userId,
   role = Role.MEMBER,
   tagNames,
+  visibilities,
+  authorIds,
   limit = 20,
   offset = 0,
 }: {
@@ -35,10 +37,17 @@ export async function searchNotes({
   userId: string;
   role?: Role;
   tagNames?: string[];
+  visibilities?: Visibility[];
+  authorIds?: string[];
   limit?: number;
   offset?: number;
 }): Promise<{ results: SearchResult[]; total: number }> {
-  if (!query.trim() && (!tagNames || tagNames.length === 0)) {
+  if (
+    !query.trim() &&
+    (!tagNames || tagNames.length === 0) &&
+    (!visibilities || visibilities.length === 0) &&
+    (!authorIds || authorIds.length === 0)
+  ) {
     return { results: [], total: 0 };
   }
 
@@ -53,13 +62,31 @@ export async function searchNotes({
 
   // NOTE: Prisma migration creates camelCase column names (@@map remaps table only).
   // All column refs in raw SQL must use double-quoted camelCase identifiers.
+  const hasTags = !!tagNames && tagNames.length > 0;
+  const hasVisibilities = !!visibilities && visibilities.length > 0;
+  const hasAuthors = !!authorIds && authorIds.length > 0;
+
+  const tagParamIndex = hasTags ? 4 : null;
+  const visibilityParamIndex = hasVisibilities ? 4 + (hasTags ? 1 : 0) : null;
+  const authorParamIndex = hasAuthors ? 4 + (hasTags ? 1 : 0) + (hasVisibilities ? 1 : 0) : null;
+
   const tagFilter =
-    tagNames && tagNames.length > 0
+    hasTags && tagParamIndex
       ? `AND EXISTS (
           SELECT 1 FROM note_tags nt2
           JOIN tags t2 ON t2.id = nt2."tagId"
-          WHERE nt2."noteId" = n.id AND t2.name = ANY($4::text[]) AND t2."orgId" = $1
+          WHERE nt2."noteId" = n.id AND t2.name = ANY($${tagParamIndex}::text[]) AND t2."orgId" = $1
         )`
+      : "";
+
+  const visibilityFilter =
+    hasVisibilities && visibilityParamIndex
+      ? `AND n.visibility = ANY($${visibilityParamIndex}::"Visibility"[])`
+      : "";
+
+  const authorFilter =
+    hasAuthors && authorParamIndex
+      ? `AND n."authorId" = ANY($${authorParamIndex}::text[])`
       : "";
 
   const rankExpr = tsQuery
@@ -81,7 +108,9 @@ export async function searchNotes({
 
   const params: unknown[] = [orgId, userId];
   if (tsQuery) params.push(tsQuery);
-  if (tagNames && tagNames.length > 0) params.push(tagNames);
+  if (hasTags) params.push(tagNames);
+  if (hasVisibilities) params.push(visibilities);
+  if (hasAuthors) params.push(authorIds);
 
   const limitParam = `$${params.length + 1}`;
   const offsetParam = `$${params.length + 2}`;
@@ -112,6 +141,8 @@ export async function searchNotes({
       AND ${visibilityClause}
       ${whereClause}
       ${tagFilter}
+      ${visibilityFilter}
+      ${authorFilter}
     GROUP BY n.id, n."authorId", n."orgId", n."createdAt", n."updatedAt", u.name
     ORDER BY rank DESC, n."updatedAt" DESC
     LIMIT ${limitParam} OFFSET ${offsetParam}
@@ -125,6 +156,8 @@ export async function searchNotes({
       AND ${visibilityClause}
       ${whereClause}
       ${tagFilter}
+      ${visibilityFilter}
+      ${authorFilter}
   `;
 
   const countParams = params.slice(0, params.length - 2);

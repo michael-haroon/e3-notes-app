@@ -11,9 +11,9 @@ const visibilityOptions = [
 ];
 
 const visibilityColors: Record<string, string> = {
-  PUBLIC: "bg-green-100 text-green-700",
-  ORG: "bg-blue-100 text-blue-700",
-  PRIVATE: "bg-gray-100 text-gray-700",
+  PUBLIC: "bg-ok-soft text-ok",
+  ORG: "bg-[var(--accent-soft)] text-[var(--accent)]",
+  PRIVATE: "bg-subtle text-dim",
 };
 
 type SharedUser = { userId: string; user: { id: string; name: string | null; email: string } };
@@ -89,7 +89,7 @@ export function VisibilityEditor({
             value={visibility}
             onChange={(e) => handleVisibilityChange(e.target.value as Visibility)}
             disabled={saving}
-            className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+            className="rounded-[7px] border border-[var(--border-color)] bg-surface px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-[var(--accent)] disabled:opacity-50"
           >
             {visibilityOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -104,15 +104,15 @@ export function VisibilityEditor({
         <div className="space-y-2">
           {shares.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Shared with:</p>
+              <p className="mb-1 text-xs font-medium text-muted">Shared with:</p>
               <div className="space-y-1">
                 {shares.map((s) => (
-                  <div key={s.userId} className="flex items-center justify-between text-xs bg-gray-50 px-3 py-1.5 rounded-lg">
+                  <div key={s.userId} className="flex items-center justify-between rounded-card border border-[var(--border-color)] bg-canvas px-3 py-1.5 text-xs text-ink">
                     <span>{s.user.name ?? s.user.email}</span>
                     <button
                       onClick={() => handleUnshare(s.userId)}
                       disabled={sharing === s.userId}
-                      className="text-red-500 hover:text-red-700 disabled:opacity-50"
+                      className="font-medium text-bad hover:opacity-70 disabled:opacity-50"
                     >
                       Remove
                     </button>
@@ -124,15 +124,15 @@ export function VisibilityEditor({
 
           {nonSharedMembers.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Add access:</p>
+              <p className="mb-1 text-xs font-medium text-muted">Add access:</p>
               <div className="space-y-1">
                 {nonSharedMembers.map((m) => (
-                  <div key={m.userId} className="flex items-center justify-between text-xs bg-gray-50 px-3 py-1.5 rounded-lg">
+                  <div key={m.userId} className="flex items-center justify-between rounded-card border border-[var(--border-color)] bg-canvas px-3 py-1.5 text-xs text-ink">
                     <span>{m.user.name ?? m.user.email}</span>
                     <button
                       onClick={() => handleShare(m.userId)}
                       disabled={sharing === m.userId}
-                      className="text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                      className="font-medium text-[var(--accent)] hover:opacity-70 disabled:opacity-50"
                     >
                       Share
                     </button>

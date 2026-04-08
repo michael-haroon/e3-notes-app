@@ -116,10 +116,14 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   async function handleOrgSwitch(orgId: string) {
+    if (!orgId || orgId === activeOrgId) return;
     setSwitchingOrg(true);
-    await switchActiveOrg(orgId);
-    router.refresh();
-    setSwitchingOrg(false);
+    try {
+      await switchActiveOrg(orgId);
+      router.refresh();
+    } finally {
+      setSwitchingOrg(false);
+    }
   }
 
   const isActive = (href: string) =>
@@ -144,12 +148,20 @@ export function AppShell({
       {/* Org switcher */}
       {orgs.length > 0 && (
         <div className="px-3 py-3 border-b border-[var(--border-color)]">
+          <label
+            htmlFor="workspace-switcher"
+            className="mb-2 block px-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted"
+          >
+            Workspace
+          </label>
           <div className="relative">
             <select
+              id="workspace-switcher"
               value={activeOrgId ?? ""}
               onChange={(e) => handleOrgSwitch(e.target.value)}
               disabled={switchingOrg}
-              className="w-full appearance-none text-[12px] font-medium bg-surface border border-[var(--border-color)] rounded-[7px] pl-2.5 pr-6 py-1.5 text-ink focus:outline-none focus:ring-1 focus:ring-[var(--accent)] disabled:opacity-50 cursor-pointer truncate"
+              className="ui-select w-full appearance-none cursor-pointer py-1.5 pl-2.5 pr-7 text-[12px] font-medium disabled:cursor-wait"
+              aria-label="Switch workspace"
             >
               {orgs.map((m) => (
                 <option key={m.orgId} value={m.orgId}>{m.org.name}</option>
@@ -159,6 +171,9 @@ export function AppShell({
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
+          {switchingOrg && (
+            <p className="mt-2 px-0.5 text-[11px] text-dim">Switching workspace…</p>
+          )}
         </div>
       )}
 
@@ -176,7 +191,7 @@ export function AppShell({
           <div className="pt-3 px-0.5">
             <Link
               href="/notes/new"
-              className="flex items-center justify-center gap-1.5 w-full py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[12px] font-semibold rounded-[8px] transition-colors"
+              className="ui-btn-primary flex w-full items-center justify-center gap-1.5 py-2 text-[12px]"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -203,7 +218,7 @@ export function AppShell({
         </div>
         <button
           onClick={() => signOut({ redirectUrl: "/login" })}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-dim hover:text-bad hover:bg-[var(--red-soft)] rounded-[6px] transition-colors"
+          className="w-full flex items-center gap-2 rounded-[6px] px-2.5 py-1.5 text-[12px] text-dim transition-colors hover:bg-[var(--red-soft)] hover:text-bad"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />

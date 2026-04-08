@@ -46,11 +46,16 @@ export default async function NotePage({
       notFound();
     }
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-xl font-bold text-red-600 mb-2">Access Denied</h1>
-          <p className="text-gray-600 mb-4">You don&apos;t have permission to view this note.</p>
-          <Link href="/dashboard" className="text-blue-600 hover:underline">
+      <div className="flex min-h-full items-center justify-center px-6 py-24">
+        <div className="max-w-sm text-center">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-bad-soft text-bad">
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zm9-3.758c0 4.971-4.029 9-9 9s-9-4.029-9-9 4.029-9 9-9 9 4.029 9 9z" />
+            </svg>
+          </div>
+          <h1 className="mb-2 font-display text-2xl font-semibold text-ink">Access Denied</h1>
+          <p className="mb-4 text-sm text-dim">You don&apos;t have permission to view this note.</p>
+          <Link href="/dashboard" className="text-sm font-medium text-[var(--accent)] hover:underline">
             Back to dashboard
           </Link>
         </div>

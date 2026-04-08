@@ -68,10 +68,10 @@ export function TagManager({
               key={tag.id}
               type="button"
               onClick={() => toggle(tag.id)}
-              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 selected
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                  ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                  : "border-[var(--border-color)] bg-surface text-dim hover:border-[var(--accent-soft-hover)] hover:text-ink"
               }`}
             >
               #{tag.name}
@@ -86,12 +86,12 @@ export function TagManager({
           value={newTagName}
           onChange={(e) => setNewTagName(e.target.value)}
           placeholder="New tag name"
-          className="flex-1 border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="flex-1 rounded-[7px] border border-[var(--border-color)] bg-surface px-3 py-1.5 text-xs text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
         />
         <button
           type="submit"
           disabled={creating || !newTagName.trim()}
-          className="text-xs px-3 py-1 bg-gray-100 border rounded hover:bg-gray-200 disabled:opacity-50"
+          className="rounded-[7px] border border-[var(--border-color)] bg-subtle px-3 py-1.5 text-xs font-medium text-dim hover:text-ink disabled:opacity-50"
         >
           {creating ? "..." : "+ Create"}
         </button>
@@ -101,7 +101,7 @@ export function TagManager({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-[7px] bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--accent-hover)] disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save tags"}
         </button>

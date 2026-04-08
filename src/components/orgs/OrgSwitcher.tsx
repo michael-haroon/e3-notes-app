@@ -29,7 +29,7 @@ export function OrgSwitcher({
     <select
       value={activeOrgId ?? ""}
       onChange={(e) => handleSwitch(e.target.value)}
-      className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors max-w-[180px] truncate"
+      className="max-w-[180px] truncate rounded-[7px] border border-[var(--border-color)] bg-surface px-3 py-1.5 text-sm text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
     >
       {orgs.map((m) => (
         <option key={m.orgId} value={m.orgId}>
