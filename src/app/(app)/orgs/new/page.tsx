@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createOrg } from "@/actions/orgs";
 import { switchActiveOrg } from "@/actions/session";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function NewOrgPage() {
   const router = useRouter();
@@ -31,8 +30,6 @@ export default function NewOrgPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
-      <div className="absolute top-4 right-4"><ThemeToggle /></div>
-
       <div className="bg-surface border border-[var(--border-color)] rounded-card shadow-float w-full max-w-md p-8">
         <div className="flex items-center gap-2.5 mb-7">
           <div className="w-7 h-7 bg-[var(--accent)] rounded-[7px] flex items-center justify-center">

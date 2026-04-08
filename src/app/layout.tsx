@@ -28,18 +28,6 @@ export const metadata: Metadata = {
   description: "Multi-tenant team notes app",
 };
 
-const themeInitScript = `
-  (function () {
-    try {
-      var saved = localStorage.getItem("theme");
-      var preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      var initial = saved === "light" || saved === "dark" ? saved : preferred;
-      document.documentElement.classList.toggle("dark", initial === "dark");
-      document.documentElement.dataset.theme = initial;
-    } catch (error) {}
-  })();
-`;
-
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -47,7 +35,6 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body className={`${geistSans.variable} ${geistMono.variable} ${lora.variable}`}>
-          <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
           <ThemeProvider>
             {children}
           </ThemeProvider>

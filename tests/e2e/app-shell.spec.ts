@@ -23,14 +23,11 @@ test.describe("App shell", () => {
     await expect(page.getByRole("heading", { name: secondOrg })).toBeVisible({ timeout: 10_000 });
   });
 
-  test("theme toggle persists after reload", async ({ page }) => {
+  test("app shell stays in light mode after reload", async ({ page }) => {
     await signIn(page, SEEDED_E2E_USER);
 
-    const toggle = page.getByRole("button", { name: "Toggle dark mode" });
-    await toggle.click();
-    await expect(page.locator("html")).toHaveClass(/dark/);
-
     await page.reload();
-    await expect(page.locator("html")).toHaveClass(/dark/);
+    await expect(page.locator("html")).not.toHaveClass(/dark/);
+    await expect(page.getByRole("button", { name: "Toggle dark mode" })).toHaveCount(0);
   });
 });

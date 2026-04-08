@@ -3,7 +3,6 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import Link from "next/link";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState } from "react";
 import { switchActiveOrg } from "@/actions/session";
 
@@ -206,7 +205,6 @@ export function AppShell({
               <p className="text-[11px] text-muted truncate leading-tight">{userEmail}</p>
             )}
           </div>
-          <ThemeToggle />
         </div>
         <button
           onClick={() => signOut({ redirectUrl: "/login" })}

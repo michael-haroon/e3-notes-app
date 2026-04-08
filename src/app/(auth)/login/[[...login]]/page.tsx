@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import LoginForm from "./LoginForm";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
@@ -10,9 +9,6 @@ export default async function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-2.5 mb-6">
           <div className="w-8 h-8 bg-[var(--accent)] rounded-[8px] flex items-center justify-center">

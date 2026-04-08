@@ -1,17 +1,10 @@
 "use client";
 
 import { SignUp } from "@clerk/nextjs";
-import { useTheme } from "@/providers/ThemeProvider";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function RegisterForm() {
-  const { theme } = useTheme();
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-2.5 mb-6">
           <div className="w-8 h-8 bg-[var(--accent)] rounded-[8px] flex items-center justify-center">
@@ -27,31 +20,31 @@ export default function RegisterForm() {
           fallbackRedirectUrl="/dashboard"
           appearance={{
             variables: {
-              colorPrimary:           theme === "dark" ? "#2BB5CC" : "#0B7285",
-              colorBackground:        theme === "dark" ? "#1C1916" : "#FFFFFF",
-              colorText:              theme === "dark" ? "#EBE5D6" : "#18160F",
-              colorTextSecondary:     theme === "dark" ? "#A09888" : "#4A4440",
-              colorInputBackground:   theme === "dark" ? "#111009" : "#F7F5F0",
-              colorInputText:         theme === "dark" ? "#EBE5D6" : "#18160F",
-              colorNeutral:           theme === "dark" ? "#EBE5D6" : "#18160F",
+              colorPrimary: "#0B7285",
+              colorBackground: "#FFFFFF",
+              colorText: "#18160F",
+              colorTextSecondary: "#4A4440",
+              colorInputBackground: "#F7F5F0",
+              colorInputText: "#18160F",
+              colorNeutral: "#18160F",
               colorTextOnPrimaryBackground: "#FFFFFF",
               borderRadius: "10px",
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
               fontSize: "14px",
             },
             elements: {
-              card:                  { backgroundColor: theme === "dark" ? "#1C1916" : "#FFFFFF", boxShadow: "var(--shadow-float)" },
-              headerTitle:           { color: theme === "dark" ? "#EBE5D6" : "#18160F", fontFamily: "var(--font-lora), Georgia, serif" },
-              headerSubtitle:        { color: theme === "dark" ? "#A09888" : "#4A4440" },
-              formFieldLabel:        { color: theme === "dark" ? "#A09888" : "#4A4440" },
-              formFieldInput:        { color: theme === "dark" ? "#EBE5D6" : "#18160F", backgroundColor: theme === "dark" ? "#111009" : "#F7F5F0", borderColor: theme === "dark" ? "rgba(235,229,214,0.12)" : "rgba(24,22,15,0.14)" },
-              formButtonPrimary:     { backgroundColor: theme === "dark" ? "#2BB5CC" : "#0B7285", color: "#fff" },
-              footerActionText:      { color: theme === "dark" ? "#A09888" : "#4A4440" },
-              footerActionLink:      { color: theme === "dark" ? "#2BB5CC" : "#0B7285" },
-              dividerText:           { color: theme === "dark" ? "#A09888" : "#4A4440" },
-              dividerLine:           { backgroundColor: theme === "dark" ? "rgba(235,229,214,0.12)" : "rgba(24,22,15,0.14)" },
-              socialButtonsBlockButton:     { borderColor: theme === "dark" ? "rgba(235,229,214,0.12)" : "rgba(24,22,15,0.14)", color: theme === "dark" ? "#EBE5D6" : "#18160F" },
-              socialButtonsBlockButtonText: { color: theme === "dark" ? "#EBE5D6" : "#18160F" },
+              card: { backgroundColor: "#FFFFFF", boxShadow: "var(--shadow-float)" },
+              headerTitle: { color: "#18160F", fontFamily: "var(--font-lora), Georgia, serif" },
+              headerSubtitle: { color: "#4A4440" },
+              formFieldLabel: { color: "#4A4440" },
+              formFieldInput: { color: "#18160F", backgroundColor: "#F7F5F0", borderColor: "rgba(24,22,15,0.14)" },
+              formButtonPrimary: { backgroundColor: "#0B7285", color: "#fff" },
+              footerActionText: { color: "#4A4440" },
+              footerActionLink: { color: "#0B7285" },
+              dividerText: { color: "#4A4440" },
+              dividerLine: { backgroundColor: "rgba(24,22,15,0.14)" },
+              socialButtonsBlockButton: { borderColor: "rgba(24,22,15,0.14)", color: "#18160F" },
+              socialButtonsBlockButtonText: { color: "#18160F" },
             },
           }}
         />

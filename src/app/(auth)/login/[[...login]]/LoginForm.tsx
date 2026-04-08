@@ -1,18 +1,14 @@
 "use client";
 
 import { SignIn } from "@clerk/nextjs";
-import { useTheme } from "@/providers/ThemeProvider";
 
 export default function LoginForm() {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-
-  const text    = isDark ? "#EBE5D6" : "#18160F";
-  const subtext = isDark ? "#A09888" : "#4A4440";
-  const bg      = isDark ? "#1C1916" : "#FFFFFF";
-  const inputBg = isDark ? "#111009" : "#F7F5F0";
-  const border  = isDark ? "rgba(235,229,214,0.12)" : "rgba(24,22,15,0.14)";
-  const accent  = isDark ? "#2BB5CC" : "#0B7285";
+  const text = "#18160F";
+  const subtext = "#4A4440";
+  const bg = "#FFFFFF";
+  const inputBg = "#F7F5F0";
+  const border = "rgba(24,22,15,0.14)";
+  const accent = "#0B7285";
 
   return (
     <SignIn

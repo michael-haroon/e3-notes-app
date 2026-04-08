@@ -43,35 +43,6 @@
   --sidebar-width: 220px;
 }
 
-.dark {
-  --bg:         #0D0C0A;
-  --bg-surface: #1A1814;
-  --bg-subtle:  #231F19;
-  --bg-sidebar: #131109;
-
-  --text-1: #EBE5D6;
-  --text-2: #9A9180;
-  --text-3: #6A6255;
-
-  --border-color:  rgba(235, 229, 214, 0.07);
-  --border-strong: rgba(235, 229, 214, 0.14);
-
-  --accent:      #2BB5CC;
-  --accent-hover:#24A0B5;
-  --accent-soft: rgba(43, 181, 204, 0.13);
-  --accent-soft-hover: rgba(43, 181, 204, 0.22);
-
-  --green:      #38A066;
-  --green-soft: rgba(56, 160, 102, 0.13);
-  --red:        #D94038;
-  --red-soft:   rgba(217, 64, 56, 0.13);
-  --amber:      #D48A20;
-  --amber-soft: rgba(212, 138, 32, 0.13);
-
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.22), 0 0 0 1px rgba(235,229,214,0.07);
-  --shadow-md: 0 4px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(235,229,214,0.07);
-}
-
 /* ── Base ──────────────────────────────────────────────── */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -84,45 +55,6 @@ body {
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.6;
-  transition: background-color 180ms ease, color 180ms ease;
-}
-
-html[data-theme-switching="true"] body {
-  overflow: hidden;
-}
-
-html[data-theme-switching="true"] body::before,
-html[data-theme-switching="true"] body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-}
-
-html[data-theme-switching="true"] body::before {
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 18%, transparent), transparent 52%),
-    linear-gradient(135deg, color-mix(in srgb, var(--bg-surface) 88%, transparent), color-mix(in srgb, var(--bg) 72%, transparent));
-  backdrop-filter: blur(12px);
-  opacity: 0.92;
-}
-
-html[data-theme-switching="true"] body::after {
-  inset: -20%;
-  background:
-    linear-gradient(
-      112deg,
-      transparent 14%,
-      color-mix(in srgb, var(--accent) 12%, transparent) 34%,
-      color-mix(in srgb, white 56%, transparent) 49%,
-      color-mix(in srgb, var(--accent) 18%, transparent) 62%,
-      transparent 82%
-    );
-  filter: blur(10px);
-  opacity: 0.85;
-  transform: translateX(-38%);
-  animation: theme-sheen 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* ── Focus ─────────────────────────────────────────────── */
@@ -197,22 +129,6 @@ html[data-theme-switching="true"] body::after {
 @keyframes shimmer {
   from { background-position: -200% 0; }
   to   { background-position: 200% 0; }
-}
-
-@keyframes theme-sheen {
-  from {
-    opacity: 0.15;
-    transform: translateX(-38%) skewX(-12deg);
-  }
-
-  35% {
-    opacity: 0.95;
-  }
-
-  to {
-    opacity: 0;
-    transform: translateX(34%) skewX(-12deg);
-  }
 }
 
 .skeleton {
