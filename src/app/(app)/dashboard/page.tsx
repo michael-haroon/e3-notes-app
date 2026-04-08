@@ -49,36 +49,37 @@ export default async function DashboardPage() {
   const role = (session.activeOrgRole ?? "MEMBER") as Role;
   const isPrivileged = isAtLeast(role, Role.ADMIN);
 
-  const [notes, authors] = await Promise.all([
-    db.note.findMany({
-      where: {
-        orgId,
-        ...(isPrivileged
-          ? {}
-          : {
-              OR: [
-                { visibility: Visibility.ORG },
-                { authorId: userId },
-                { shares: { some: { userId } } },
-              ],
-            }),
-      },
-      include: {
-        author: { select: { id: true, name: true, email: true } },
-        tags: { include: { tag: true } },
-        _count: { select: { versions: true, files: true } },
-      },
-      orderBy: { updatedAt: "desc" },
-    }),
-    db.orgMember.findMany({
-      where: { orgId },
-      select: {
-        userId: true,
-        user: { select: { name: true, email: true } },
-      },
-      orderBy: { joinedAt: "asc" },
-    }),
-  ]);
+  const notes = await db.note.findMany({
+    where: {
+      orgId,
+      ...(isPrivileged
+        ? {}
+        : {
+            OR: [
+              { visibility: Visibility.ORG },
+              { authorId: userId },
+              { shares: { some: { userId } } },
+            ],
+          }),
+    },
+    include: {
+      author: { select: { id: true, name: true, email: true } },
+      tags: { include: { tag: true } },
+      _count: { select: { versions: true, files: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  const authorMap = new Map<string, { id: string; label: string }>();
+  for (const note of notes) {
+    if (!authorMap.has(note.author.id)) {
+      authorMap.set(note.author.id, {
+        id: note.author.id,
+        label: note.author.name ?? note.author.email,
+      });
+    }
+  }
+  const authors = Array.from(authorMap.values());
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -105,10 +106,7 @@ export default async function DashboardPage() {
       <NotesWorkspace
         notes={notes}
         currentUserId={userId}
-        authors={authors.map((member) => ({
-          id: member.userId,
-          label: member.user.name ?? member.user.email,
-        }))}
+        authors={authors}
       />
     </div>
   );
