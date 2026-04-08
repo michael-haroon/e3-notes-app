@@ -18,8 +18,10 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const query = url.searchParams.get("q") ?? "";
   const tags = url.searchParams.getAll("tag");
-  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "20"), 100);
-  const offset = Math.max(parseInt(url.searchParams.get("offset") ?? "0"), 0);
+  const rawLimit = parseInt(url.searchParams.get("limit") ?? "20");
+  const rawOffset = parseInt(url.searchParams.get("offset") ?? "0");
+  const limit = Math.min(isNaN(rawLimit) ? 20 : rawLimit, 100);
+  const offset = Math.max(isNaN(rawOffset) ? 0 : rawOffset, 0);
 
   const { results, total } = await searchNotes({
     query,

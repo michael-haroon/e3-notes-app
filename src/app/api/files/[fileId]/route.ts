@@ -80,7 +80,7 @@ export async function GET(
     return new NextResponse(stream as unknown as ReadableStream, {
       headers: {
         "Content-Type": file.mimeType,
-        "Content-Disposition": `inline; filename="${file.filename}"`,
+        "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
         "Content-Length": String(file.size),
         "Cache-Control": "private, max-age=3600",
       },

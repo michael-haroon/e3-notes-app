@@ -15,29 +15,50 @@ type Version = {
 export function VersionsView({ noteId }: { noteId: string }) {
   const [versions, setVersions] = useState<Version[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedFrom, setSelectedFrom] = useState<number | null>(null);
   const [selectedTo, setSelectedTo] = useState<number | null>(null);
   const [diff, setDiff] = useState<{ contentDiff: string; titleDiff: string | null } | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
+  const [diffError, setDiffError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<number | null>(null);
   const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
 
   async function loadVersions() {
-    const res = await fetch(`/api/notes/${noteId}/versions`);
-    const data = await res.json();
-    setVersions(data.versions ?? []);
-    setLoading(false);
+    setLoadError(null);
+    try {
+      const res = await fetch(`/api/notes/${noteId}/versions`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load versions");
+      setVersions(data.versions ?? []);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load versions");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { loadVersions(); }, [noteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadDiff() {
     if (!selectedFrom || !selectedTo) return;
+    if (selectedFrom === selectedTo) {
+      setDiffError("Select two different versions to compare.");
+      return;
+    }
     setDiffLoading(true);
-    const res = await fetch(`/api/notes/${noteId}/versions?from=${selectedFrom}&to=${selectedTo}`);
-    const data = await res.json();
-    setDiff(data);
-    setDiffLoading(false);
+    setDiff(null);
+    setDiffError(null);
+    try {
+      const res = await fetch(`/api/notes/${noteId}/versions?from=${selectedFrom}&to=${selectedTo}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load diff");
+      setDiff(data);
+    } catch (err) {
+      setDiffError(err instanceof Error ? err.message : "Failed to compare versions");
+    } finally {
+      setDiffLoading(false);
+    }
   }
 
   async function handleRestore(version: number) {
@@ -50,79 +71,116 @@ export function VersionsView({ noteId }: { noteId: string }) {
         body: JSON.stringify({ version }),
       });
       if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error);
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error ?? "Restore failed");
       }
-      setRestoreMsg(`Restored to v${version} successfully. A new version was created.`);
+      setRestoreMsg(`Restored to v${version}. A new version was created.`);
       await loadVersions();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Restore failed");
+      setLoadError(err instanceof Error ? err.message : "Restore failed");
     } finally {
       setRestoring(null);
     }
   }
 
-  if (loading) return <div className="text-gray-500">Loading versions...</div>;
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-surface border border-[var(--border-color)] rounded-card p-5">
+            <div className="skeleton h-4 w-1/3 mb-2.5" />
+            <div className="skeleton h-3 w-2/3" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="bg-bad-soft border border-[var(--red-soft)] text-bad rounded-card p-4 flex items-start gap-2 text-[13px]">
+        <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+        </svg>
+        <span className="flex-1">{loadError}</span>
+        <button onClick={loadVersions} className="text-[var(--accent)] hover:underline text-[12px] shrink-0">Retry</button>
+      </div>
+    );
+  }
+
+  if (versions.length === 0) {
+    return (
+      <div className="bg-surface border border-[var(--border-color)] rounded-card p-10 text-center shadow-card">
+        <p className="text-dim text-[13px]">No versions recorded yet.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">Version History ({versions.length} versions)</h2>
-
+    <div className="space-y-5">
       {restoreMsg && (
-        <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
-          {restoreMsg}
-          <button onClick={() => setRestoreMsg(null)} className="ml-2 text-green-500 hover:text-green-700">✕</button>
+        <div className="bg-ok-soft border border-[var(--green-soft)] text-ok rounded-card p-3.5 flex items-center justify-between text-[13px]">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {restoreMsg}
+          </div>
+          <button onClick={() => setRestoreMsg(null)} className="text-ok hover:opacity-70 text-lg leading-none ml-3">×</button>
         </div>
       )}
 
+      {/* Compare panel */}
       {versions.length >= 2 && (
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="font-semibold mb-3">Compare Versions</h3>
-          <div className="flex items-center gap-3 flex-wrap">
+        <div className="bg-surface border border-[var(--border-color)] rounded-card p-5 shadow-card">
+          <h3 className="font-medium text-[13px] text-ink mb-3">Compare Versions</h3>
+          <div className="flex items-center gap-2 flex-wrap">
             <select
               value={selectedFrom ?? ""}
-              onChange={(e) => setSelectedFrom(parseInt(e.target.value))}
-              className="border rounded-lg px-3 py-2 text-sm"
+              onChange={(e) => { setSelectedFrom(parseInt(e.target.value)); setDiff(null); setDiffError(null); }}
+              className="bg-canvas border border-[var(--border-color)] rounded-[7px] px-3 py-2 text-[13px] text-ink focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             >
-              <option value="">From version...</option>
+              <option value="">From…</option>
               {versions.map((v) => (
-                <option key={v.id} value={v.version}>
-                  v{v.version} — {new Date(v.createdAt).toLocaleString()}
-                </option>
+                <option key={v.id} value={v.version}>v{v.version} — {new Date(v.createdAt).toLocaleDateString()}</option>
               ))}
             </select>
-            <span className="text-gray-400">→</span>
+            <svg className="w-4 h-4 text-muted shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
             <select
               value={selectedTo ?? ""}
-              onChange={(e) => setSelectedTo(parseInt(e.target.value))}
-              className="border rounded-lg px-3 py-2 text-sm"
+              onChange={(e) => { setSelectedTo(parseInt(e.target.value)); setDiff(null); setDiffError(null); }}
+              className="bg-canvas border border-[var(--border-color)] rounded-[7px] px-3 py-2 text-[13px] text-ink focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             >
-              <option value="">To version...</option>
+              <option value="">To…</option>
               {versions.map((v) => (
-                <option key={v.id} value={v.version}>
-                  v{v.version} — {new Date(v.createdAt).toLocaleString()}
-                </option>
+                <option key={v.id} value={v.version}>v{v.version} — {new Date(v.createdAt).toLocaleDateString()}</option>
               ))}
             </select>
             <button
               onClick={loadDiff}
               disabled={!selectedFrom || !selectedTo || diffLoading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-[var(--accent)] text-white rounded-[7px] text-[12px] font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
             >
-              {diffLoading ? "..." : "Compare"}
+              {diffLoading ? "Comparing…" : "Compare"}
             </button>
           </div>
 
+          {diffError && (
+            <p className="mt-2.5 text-[12px] text-bad bg-bad-soft px-3 py-2 rounded-[6px]">{diffError}</p>
+          )}
+
           {diff && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-3 pt-4 border-t border-[var(--border-color)]">
               {diff.titleDiff && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Title diff</p>
+                  <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-1.5">Title</p>
                   <DiffViewer diff={diff.titleDiff} />
                 </div>
               )}
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-1">Content diff</p>
+                <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-1.5">Content</p>
                 <DiffViewer diff={diff.contentDiff} />
               </div>
             </div>
@@ -130,34 +188,37 @@ export function VersionsView({ noteId }: { noteId: string }) {
         </div>
       )}
 
-      <div className="space-y-3">
+      {/* Version list */}
+      <div className="space-y-2.5">
         {versions.map((v) => (
-          <div key={v.id} className="bg-white border rounded-xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-sm font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+          <div key={v.id} className="bg-surface border border-[var(--border-color)] rounded-card p-5 shadow-card">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="font-mono text-[11px] font-semibold bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-0.5 rounded-[4px]">
                   v{v.version}
                 </span>
-                <span className="text-sm text-gray-700 font-medium">{v.title}</span>
+                <span className="text-[13px] font-medium text-ink">{v.title}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="text-xs text-gray-400 text-right">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="text-[11px] text-muted text-right">
                   <span>{v.author.name ?? v.author.email}</span>
-                  <span className="mx-1">•</span>
-                  <span>{new Date(v.createdAt).toLocaleString()}</span>
+                  <span className="mx-1">·</span>
+                  <span>{new Date(v.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                 </div>
                 <button
                   onClick={() => handleRestore(v.version)}
-                  disabled={restoring === v.version}
-                  className="text-xs px-3 py-1 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                  disabled={!!restoring}
+                  className="text-[11px] px-2.5 py-1 border border-[var(--border-color)] text-dim rounded-[6px] hover:bg-subtle hover:text-ink disabled:opacity-50 transition-colors whitespace-nowrap"
                 >
-                  {restoring === v.version ? "Restoring..." : "Restore"}
+                  {restoring === v.version ? "Restoring…" : "Restore"}
                 </button>
               </div>
             </div>
-            <p className="text-sm text-gray-500 truncate">
-              {v.content.slice(0, 200) || "Empty content"}
-            </p>
+            {v.content && (
+              <p className="text-[12px] text-dim mt-2.5 line-clamp-2 font-mono leading-relaxed">
+                {v.content}
+              </p>
+            )}
           </div>
         ))}
       </div>

@@ -238,7 +238,7 @@ export async function deleteOrg(orgId: string) {
 
   await db.org.delete({ where: { id: orgId } });
 
-  await writeAuditLog({ action: "org.create", userId, orgId, resourceType: "org", metadata: { deleted: true } });
+  await writeAuditLog({ action: "org.delete", userId, orgId, resourceType: "org", metadata: { deleted: true } });
   revalidatePath("/dashboard");
   return { success: true };
 }

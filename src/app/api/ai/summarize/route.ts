@@ -11,6 +11,12 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
+
+  // Purge expired entries to prevent unbounded memory growth
+  rateLimitMap.forEach((val, key) => {
+    if (val.resetAt < now) rateLimitMap.delete(key);
+  });
+
   const entry = rateLimitMap.get(userId);
   if (!entry || entry.resetAt < now) {
     rateLimitMap.set(userId, { count: 1, resetAt: now + 60 * 60 * 1000 });

@@ -14,77 +14,105 @@ type Note = {
   _count: { versions: number; files: number };
 };
 
-const visibilityBadge: Record<string, { label: string; className: string }> = {
-  PUBLIC: { label: "Public", className: "bg-green-100 text-green-700" },
-  ORG: { label: "Org", className: "bg-blue-100 text-blue-700" },
-  PRIVATE: { label: "Private", className: "bg-gray-100 text-gray-700" },
+const visTag: Record<string, string> = {
+  PUBLIC:  "bg-ok-soft text-ok",
+  ORG:     "bg-[var(--accent-soft)] text-[var(--accent)]",
+  PRIVATE: "bg-subtle text-muted",
 };
 
-export function NoteList({
-  notes,
-  currentUserId,
-}: {
-  notes: Note[];
-  currentUserId: string;
-}) {
+const visLabel: Record<string, string> = {
+  PUBLIC: "Public", ORG: "Org", PRIVATE: "Private",
+};
+
+export function NoteList({ notes, currentUserId }: { notes: Note[]; currentUserId: string }) {
   if (notes.length === 0) {
     return (
-      <div className="text-center py-16 text-gray-500">
-        <p className="text-lg mb-2">No notes yet</p>
-        <p className="text-sm">Create your first note to get started.</p>
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-12 h-12 rounded-full bg-subtle flex items-center justify-center mb-4">
+          <svg className="w-6 h-6 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
+        </div>
+        <p className="font-display text-base font-medium text-ink mb-1">No notes yet</p>
+        <p className="text-sm text-dim mb-5">Create your first note to get started.</p>
+        <Link href="/notes/new" className="flex items-center gap-1.5 bg-[var(--accent)] text-white px-4 py-2 rounded-card text-sm font-semibold hover:bg-[var(--accent-hover)] transition-colors">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          New Note
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {notes.map((note) => {
-        const badge = visibilityBadge[note.visibility];
         const isOwn = note.authorId === currentUserId;
+        const preview = note.content.replace(/\n+/g, " ").trim();
+        const daysSince = Math.floor((Date.now() - new Date(note.updatedAt).getTime()) / 86_400_000);
+        const dateLabel =
+          daysSince === 0 ? "Today" :
+          daysSince === 1 ? "Yesterday" :
+          daysSince < 7   ? `${daysSince}d ago` :
+          new Date(note.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
         return (
           <Link
             key={note.id}
             href={`/notes/${note.id}`}
-            className="block bg-white rounded-xl border p-5 hover:shadow-sm transition-shadow"
+            className="group flex items-start gap-4 bg-surface border border-[var(--border-color)] rounded-card px-5 py-4 hover:shadow-card hover:border-[var(--border-strong)] transition-all cursor-pointer"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-gray-900 truncate">{note.title}</h3>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${badge.className}`}>
-                    {badge.label}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 truncate">
-                  {note.content.slice(0, 150) || "No content"}
-                </p>
-                {note.tags.length > 0 && (
-                  <div className="flex gap-1 mt-2 flex-wrap">
-                    {note.tags.map(({ tag }) => (
-                      <span
-                        key={tag.id}
-                        className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full"
-                      >
-                        #{tag.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
+            {/* Left: content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h3 className="font-medium text-ink text-[14px] truncate group-hover:text-[var(--accent)] transition-colors">
+                  {note.title}
+                </h3>
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-[4px] font-medium shrink-0 ${visTag[note.visibility]}`}>
+                  {visLabel[note.visibility]}
+                </span>
               </div>
-              <div className="text-right text-xs text-gray-400 shrink-0">
-                <p>{isOwn ? "You" : (note.author.name ?? note.author.email)}</p>
-                <p className="mt-1">
-                  {new Date(note.updatedAt).toLocaleDateString()}
+              {preview && (
+                <p className="text-[13px] text-dim line-clamp-1 leading-relaxed">
+                  {preview}
                 </p>
-                <div className="flex gap-2 justify-end mt-1">
+              )}
+              {note.tags.length > 0 && (
+                <div className="flex gap-1.5 mt-2 flex-wrap">
+                  {note.tags.map(({ tag }) => (
+                    <span key={tag.id} className="text-[11px] bg-subtle text-dim px-2 py-0.5 rounded-full">
+                      #{tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right: meta */}
+            <div className="text-right text-[12px] text-muted shrink-0 space-y-1">
+              <p className="text-dim font-medium">{isOwn ? "You" : (note.author.name ?? note.author.email)}</p>
+              <p>{dateLabel}</p>
+              {(note._count.versions > 0 || note._count.files > 0) && (
+                <div className="flex items-center gap-2 justify-end">
                   {note._count.versions > 0 && (
-                    <span>{note._count.versions}v</span>
+                    <span className="flex items-center gap-0.5">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {note._count.versions}
+                    </span>
                   )}
                   {note._count.files > 0 && (
-                    <span>{note._count.files} files</span>
+                    <span className="flex items-center gap-0.5">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                      </svg>
+                      {note._count.files}
+                    </span>
                   )}
                 </div>
-              </div>
+              )}
             </div>
           </Link>
         );

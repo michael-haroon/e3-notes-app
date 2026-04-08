@@ -25,11 +25,12 @@ type Note = {
   shares: { userId: string; user: { id: string; name: string | null; email: string } }[];
 };
 
-const visibilityLabels: Record<string, string> = {
-  PUBLIC: "Public",
-  ORG: "Org",
-  PRIVATE: "Private",
+const visTag: Record<string, string> = {
+  PUBLIC:  "bg-ok-soft text-ok",
+  ORG:     "bg-[var(--accent-soft)] text-[var(--accent)]",
+  PRIVATE: "bg-subtle text-muted",
 };
+const visLabel: Record<string, string> = { PUBLIC: "Public", ORG: "Org", PRIVATE: "Private" };
 
 export function NoteDetail({
   note,
@@ -48,12 +49,9 @@ export function NoteDetail({
   const [deleting, setDeleting] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [summaryResult, setSummaryResult] = useState<{
-    summary: string;
-    keyPoints: string[];
-    topics: string[];
+    summary: string; keyPoints: string[]; topics: string[];
   } | null>(null);
   const [summaryId, setSummaryId] = useState<string | null>(null);
-
 
   const latestSummary = note.aiSummaries[0];
 
@@ -100,188 +98,213 @@ export function NoteDetail({
     router.refresh();
   }
 
+  const daysSince = Math.floor((Date.now() - new Date(note.updatedAt).getTime()) / 86_400_000);
+  const dateLabel =
+    daysSince === 0 ? "Today" :
+    daysSince === 1 ? "Yesterday" :
+    new Date(note.updatedAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b px-6 py-3 flex items-center gap-4">
-        <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700">
-          ← Dashboard
-        </Link>
-        <span className="text-gray-300">/</span>
-        <span className="text-sm font-medium truncate">{note.title}</span>
-      </nav>
+    <div className="max-w-3xl mx-auto px-6 py-8">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-[12px] text-dim mb-6">
+        <Link href="/dashboard" className="hover:text-ink transition-colors">Notes</Link>
+        <svg className="w-3 h-3 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+        <span className="text-ink truncate max-w-[200px]">{note.title}</span>
+      </div>
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <div className="bg-white rounded-xl border p-8">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">{note.title}</h1>
-              <div className="flex items-center gap-3 text-sm text-gray-500">
-                <span>By {note.author.name ?? note.author.email}</span>
-                <span>•</span>
-                <span className="capitalize">{visibilityLabels[note.visibility]}</span>
-                <span>•</span>
-                <span>Updated {new Date(note.updatedAt).toLocaleDateString()}</span>
-                <span>•</span>
-                <span>{note.versions.length} version{note.versions.length !== 1 ? "s" : ""}</span>
-              </div>
-              {note.tags.length > 0 && (
-                <div className="flex gap-1 mt-3 flex-wrap">
-                  {note.tags.map(({ tag }) => (
-                    <span key={tag.id} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                      #{tag.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 shrink-0">
-              {canEdit && (
-                <Link
-                  href={`/notes/${note.id}/edit`}
-                  className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
-                >
-                  Edit
-                </Link>
-              )}
+      {/* Header */}
+      <div className="mb-7">
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <h1 className="font-display text-[28px] font-semibold text-ink leading-tight tracking-tight flex-1">
+            {note.title}
+          </h1>
+          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+            {canEdit && (
               <Link
-                href={`/notes/${note.id}/versions`}
-                className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
+                href={`/notes/${note.id}/edit`}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium border border-[var(--border-color)] rounded-[7px] text-dim hover:text-ink hover:bg-subtle transition-colors"
               >
-                History
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" />
+                </svg>
+                Edit
               </Link>
+            )}
+            <Link
+              href={`/notes/${note.id}/versions`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium border border-[var(--border-color)] rounded-[7px] text-dim hover:text-ink hover:bg-subtle transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              History
+            </Link>
+            <button
+              onClick={handleSummarize}
+              disabled={summarizing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium border border-[var(--border-color)] rounded-[7px] text-dim hover:text-ink hover:bg-subtle disabled:opacity-50 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+              </svg>
+              {summarizing ? "Thinking…" : "AI Summary"}
+            </button>
+            {canDelete && (
               <button
-                onClick={handleSummarize}
-                disabled={summarizing}
-                className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-3 py-1.5 text-[12px] font-medium text-bad bg-bad-soft border border-[var(--red-soft)] rounded-[7px] hover:opacity-80 disabled:opacity-50 transition-colors"
               >
-                {summarizing ? "..." : "AI Summary"}
+                {deleting ? "Deleting…" : "Delete"}
               </button>
-              {canDelete && (
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="px-3 py-1.5 text-sm bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
-                >
-                  {deleting ? "..." : "Delete"}
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="prose max-w-none">
-            <pre className="whitespace-pre-wrap font-sans text-gray-800 leading-relaxed">
-              {note.content || "No content yet."}
-            </pre>
-          </div>
-
-          {/* AI Summary result */}
-          {summaryResult && (
-            <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-              <h3 className="font-semibold text-purple-800 mb-2">AI Summary</h3>
-              <p className="text-sm text-gray-700 mb-3">{summaryResult.summary}</p>
-              {summaryResult.keyPoints.length > 0 && (
-                <ul className="text-sm text-gray-700 list-disc list-inside space-y-1 mb-3">
-                  {summaryResult.keyPoints.map((pt, i) => (
-                    <li key={i}>{pt}</li>
-                  ))}
-                </ul>
-              )}
-              {summaryResult.topics.length > 0 && (
-                <div className="flex gap-1 mb-3">
-                  {summaryResult.topics.map((t) => (
-                    <span key={t} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleAcceptSummary(true)}
-                  className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                >
-                  Accept
-                </button>
-                <button
-                  onClick={() => handleAcceptSummary(false)}
-                  className="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Previously accepted summary */}
-          {!summaryResult && latestSummary?.accepted && (
-            <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-              <h3 className="font-semibold text-purple-800 mb-2">Accepted AI Summary</h3>
-              {(() => {
-                try {
-                  const parsed = JSON.parse(latestSummary.content) as {
-                    summary: string;
-                    keyPoints: string[];
-                    topics: string[];
-                  };
-                  return (
-                    <>
-                      <p className="text-sm text-gray-700 mb-2">{parsed.summary}</p>
-                      {parsed.keyPoints.length > 0 && (
-                        <ul className="text-sm text-gray-700 list-disc list-inside">
-                          {parsed.keyPoints.map((pt, i) => <li key={i}>{pt}</li>)}
-                        </ul>
-                      )}
-                    </>
-                  );
-                } catch {
-                  return <p className="text-sm text-gray-700">{latestSummary.content}</p>;
-                }
-              })()}
-            </div>
-          )}
-
-          {/* Version History Panel */}
-          {note.versions.length > 0 && (
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Recent Changes</h3>
-                <Link href={`/notes/${note.id}/versions`} className="text-xs text-blue-600 hover:underline">
-                  View all {note.versions.length} versions →
-                </Link>
-              </div>
-              <div className="space-y-2">
-                {note.versions.slice(0, 3).map((v) => (
-                  <div key={v.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">v{v.version}</span>
-                      <span className="text-gray-500 text-xs">
-                        {v.author ? (v.author.name ?? v.author.email) : "Unknown"}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {new Date(v.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Sharing (PRIVATE notes, author only) */}
-          {note.visibility === Visibility.PRIVATE && isAuthor && (
-            <SharePanel
-              noteId={note.id}
-              shares={note.shares}
-              orgMembers={orgMembers}
-            />
-          )}
-
-          {/* Files */}
-          <div className="mt-6">
-            <FileUploader noteId={note.id} />
+            )}
           </div>
         </div>
-      </main>
+
+        {/* Meta */}
+        <div className="flex items-center gap-3 flex-wrap text-[12px] text-dim">
+          <span className={`px-1.5 py-0.5 rounded-[4px] font-medium text-[11px] ${visTag[note.visibility]}`}>
+            {visLabel[note.visibility]}
+          </span>
+          <span>by <span className="text-ink font-medium">{note.author.name ?? note.author.email}</span></span>
+          <span className="text-muted">·</span>
+          <span>{dateLabel}</span>
+          {note.versions.length > 0 && (
+            <>
+              <span className="text-muted">·</span>
+              <span>{note.versions.length}v</span>
+            </>
+          )}
+        </div>
+
+        {/* Tags */}
+        {note.tags.length > 0 && (
+          <div className="flex gap-1.5 mt-3 flex-wrap">
+            {note.tags.map(({ tag }) => (
+              <span key={tag.id} className="text-[11px] bg-subtle text-dim px-2 py-0.5 rounded-full">
+                #{tag.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="bg-surface border border-[var(--border-color)] rounded-card px-7 py-6 shadow-card mb-5">
+        <pre className="whitespace-pre-wrap font-sans text-[14px] text-ink leading-[1.75]">
+          {note.content || <span className="text-muted italic">No content yet.</span>}
+        </pre>
+      </div>
+
+      {/* AI Summary — new result */}
+      {summaryResult && (
+        <div className="bg-surface border border-[var(--border-color)] rounded-card p-5 mb-5 shadow-card">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-4 h-4 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+            </svg>
+            <h3 className="font-medium text-[13px] text-ink">AI Summary</h3>
+          </div>
+          <p className="text-[13px] text-dim leading-relaxed mb-3">{summaryResult.summary}</p>
+          {summaryResult.keyPoints.length > 0 && (
+            <ul className="space-y-1 mb-3">
+              {summaryResult.keyPoints.map((pt, i) => (
+                <li key={i} className="flex items-start gap-1.5 text-[13px] text-dim">
+                  <span className="text-[var(--accent)] mt-0.5 shrink-0">›</span>{pt}
+                </li>
+              ))}
+            </ul>
+          )}
+          {summaryResult.topics.length > 0 && (
+            <div className="flex gap-1.5 mb-4 flex-wrap">
+              {summaryResult.topics.map((t) => (
+                <span key={t} className="text-[11px] bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-0.5 rounded-full">{t}</span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button onClick={() => handleAcceptSummary(true)} className="px-3 py-1.5 bg-[var(--accent)] text-white text-[12px] font-medium rounded-[6px] hover:bg-[var(--accent-hover)] transition-colors">
+              Accept
+            </button>
+            <button onClick={() => handleAcceptSummary(false)} className="px-3 py-1.5 border border-[var(--border-color)] text-dim text-[12px] font-medium rounded-[6px] hover:bg-subtle transition-colors">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Accepted summary */}
+      {!summaryResult && latestSummary?.accepted && (
+        <div className="bg-[var(--accent-soft)] border border-[var(--accent-soft)] rounded-card p-5 mb-5">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="w-4 h-4 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="font-medium text-[13px] text-[var(--accent)]">Accepted AI Summary</h3>
+          </div>
+          {(() => {
+            try {
+              const parsed = JSON.parse(latestSummary.content) as { summary: string; keyPoints: string[] };
+              return (
+                <>
+                  <p className="text-[13px] text-ink leading-relaxed mb-2">{parsed.summary}</p>
+                  {parsed.keyPoints?.length > 0 && (
+                    <ul className="space-y-1">
+                      {parsed.keyPoints.map((pt, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-[13px] text-dim">
+                          <span className="text-[var(--accent)] mt-0.5 shrink-0">›</span>{pt}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              );
+            } catch {
+              return <p className="text-[13px] text-ink">{latestSummary.content}</p>;
+            }
+          })()}
+        </div>
+      )}
+
+      {/* Version history preview */}
+      {note.versions.length > 0 && (
+        <div className="bg-surface border border-[var(--border-color)] rounded-card p-5 mb-5 shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-[13px] text-ink">Version History</h3>
+            <Link href={`/notes/${note.id}/versions`} className="text-[12px] text-[var(--accent)] hover:underline">
+              View all →
+            </Link>
+          </div>
+          <div className="divide-y divide-[var(--border-color)]">
+            {note.versions.slice(0, 3).map((v) => (
+              <div key={v.id} className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] bg-[var(--accent-soft)] text-[var(--accent)] px-1.5 py-0.5 rounded-[4px] font-semibold">
+                    v{v.version}
+                  </span>
+                  <span className="text-[12px] text-dim">{v.author ? (v.author.name ?? v.author.email) : "Unknown"}</span>
+                </div>
+                <span className="text-[11px] text-muted">
+                  {new Date(v.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Share panel */}
+      {note.visibility === Visibility.PRIVATE && isAuthor && (
+        <div className="mb-5">
+          <SharePanel noteId={note.id} shares={note.shares} orgMembers={orgMembers} />
+        </div>
+      )}
+
+      {/* Files */}
+      <FileUploader noteId={note.id} />
     </div>
   );
 }

@@ -63,13 +63,13 @@ describe("canReadNote", () => {
     it("member with NoteShare CAN read PRIVATE note", () => {
       expect(canReadNote(user, org, note, [{ userId: "u1" }])).toBe(true);
     });
-    it("ADMIN cannot read PRIVATE note without share", () => {
+    it("ADMIN can read PRIVATE note without share (oversight role)", () => {
       const adminOrg = makeOrg("org1", Role.ADMIN);
-      expect(canReadNote(user, adminOrg, note)).toBe(false);
+      expect(canReadNote(user, adminOrg, note)).toBe(true);
     });
-    it("OWNER cannot read PRIVATE note without share", () => {
+    it("OWNER can read PRIVATE note without share (oversight role)", () => {
       const ownerOrg = makeOrg("org1", Role.OWNER);
-      expect(canReadNote(user, ownerOrg, note)).toBe(false);
+      expect(canReadNote(user, ownerOrg, note)).toBe(true);
     });
     it("wrong org member with share cannot read PRIVATE note", () => {
       const wrongOrg = makeOrg("org2", Role.MEMBER);
@@ -93,16 +93,16 @@ describe("canWriteNote", () => {
     expect(canWriteNote(otherUser, org, note)).toBe(false);
   });
 
-  it("ADMIN can write any note in their org", () => {
+  it("ADMIN cannot write another user's note (author-only edit)", () => {
     const adminOrg = makeOrg("org1", Role.ADMIN);
     const note = makeNote("u1", Visibility.ORG);
-    expect(canWriteNote(otherUser, adminOrg, note)).toBe(true);
+    expect(canWriteNote(otherUser, adminOrg, note)).toBe(false);
   });
 
-  it("OWNER can write any note in their org", () => {
+  it("OWNER cannot write another user's note (author-only edit)", () => {
     const ownerOrg = makeOrg("org1", Role.OWNER);
     const note = makeNote("u1", Visibility.PRIVATE);
-    expect(canWriteNote(otherUser, ownerOrg, note)).toBe(true);
+    expect(canWriteNote(otherUser, ownerOrg, note)).toBe(false);
   });
 
   it("cannot write note from different org", () => {
@@ -124,8 +124,8 @@ describe("canDeleteNote", () => {
     expect(canDeleteNote(author, makeOrg("org1", Role.MEMBER), note)).toBe(true);
   });
 
-  it("ADMIN cannot delete another user's note", () => {
-    expect(canDeleteNote(admin, makeOrg("org1", Role.ADMIN), note)).toBe(false);
+  it("ADMIN can delete another user's note (moderation role)", () => {
+    expect(canDeleteNote(admin, makeOrg("org1", Role.ADMIN), note)).toBe(true);
   });
 
   it("OWNER can delete any note", () => {

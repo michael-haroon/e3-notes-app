@@ -2,26 +2,137 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design Tokens ─────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Backgrounds — warm parchment palette */
+  --bg:          #F6F3EC;
+  --bg-surface:  #FFFFFF;
+  --bg-subtle:   #EDE8DC;
+  --bg-sidebar:  #EAE4D5;
+
+  /* Text */
+  --text-1: #1A1712;
+  --text-2: #706A5C;
+  --text-3: #A09680;
+
+  /* Borders */
+  --border-color:  rgba(26, 23, 18, 0.09);
+  --border-strong: rgba(26, 23, 18, 0.18);
+
+  /* Accent — deep teal */
+  --accent:      #0B7285;
+  --accent-hover:#095F70;
+  --accent-soft: rgba(11, 114, 133, 0.09);
+  --accent-soft-hover: rgba(11, 114, 133, 0.16);
+
+  /* Status */
+  --green:      #277A4A;
+  --green-soft: rgba(39, 122, 74, 0.10);
+  --red:        #BB2E20;
+  --red-soft:   rgba(187, 46, 32, 0.10);
+  --amber:      #B06A10;
+  --amber-soft: rgba(176, 106, 16, 0.10);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(26,23,18,0.06), 0 0 0 1px rgba(26,23,18,0.07);
+  --shadow-md: 0 4px 24px rgba(26,23,18,0.10), 0 0 0 1px rgba(26,23,18,0.07);
+
+  /* Layout */
+  --radius: 10px;
+  --sidebar-width: 220px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --bg:         #0D0C0A;
+  --bg-surface: #1A1814;
+  --bg-subtle:  #231F19;
+  --bg-sidebar: #131109;
+
+  --text-1: #EBE5D6;
+  --text-2: #9A9180;
+  --text-3: #6A6255;
+
+  --border-color:  rgba(235, 229, 214, 0.07);
+  --border-strong: rgba(235, 229, 214, 0.14);
+
+  --accent:      #2BB5CC;
+  --accent-hover:#24A0B5;
+  --accent-soft: rgba(43, 181, 204, 0.13);
+  --accent-soft-hover: rgba(43, 181, 204, 0.22);
+
+  --green:      #38A066;
+  --green-soft: rgba(56, 160, 102, 0.13);
+  --red:        #D94038;
+  --red-soft:   rgba(217, 64, 56, 0.13);
+  --amber:      #D48A20;
+  --amber-soft: rgba(212, 138, 32, 0.13);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.22), 0 0 0 1px rgba(235,229,214,0.07);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(235,229,214,0.07);
 }
+
+/* ── Base ──────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: var(--text-1);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* ── Focus ─────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Selection ─────────────────────────────────────────── */
+::selection {
+  background: var(--accent-soft);
+  color: var(--text-1);
+}
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+/* ── Typography utilities ──────────────────────────────── */
+.font-display {
+  font-family: var(--font-lora), Georgia, "Times New Roman", serif;
+}
+
+/* ── Animation ─────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-subtle) 25%,
+    var(--bg)        50%,
+    var(--bg-subtle) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 4px;
 }
