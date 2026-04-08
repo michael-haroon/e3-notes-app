@@ -1,4 +1,5 @@
 "use client";
+import { getActionError } from "@/lib/action-error";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -31,7 +32,7 @@ export function SharePanel({
       await shareNote(noteId, userId);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Share failed");
+      setError(getActionError(err, "Share failed"));
     } finally {
       setBusy(null);
     }
@@ -44,7 +45,7 @@ export function SharePanel({
       await unshareNote(noteId, userId);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unshare failed");
+      setError(getActionError(err, "Unshare failed"));
     } finally {
       setBusy(null);
     }

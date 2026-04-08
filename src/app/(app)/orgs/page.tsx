@@ -1,14 +1,14 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import Link from "next/link";
 import { OrgSettings } from "@/components/orgs/OrgSettings";
 import { isAtLeast } from "@/lib/permissions";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 
 export default async function OrgsPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  
+  const session = await getSession().catch(() => null); if (!session) redirect("/login");
 
   const orgId = session.activeOrgId;
   if (!orgId) redirect("/orgs/new");
@@ -32,33 +32,25 @@ export default async function OrgsPage() {
   if (!membership) redirect("/dashboard");
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b px-6 py-3 flex items-center gap-4">
-        <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700">
-          ← Dashboard
-        </Link>
-        <span className="text-gray-300">/</span>
-        <span className="text-sm font-medium">Org Settings</span>
-      </nav>
-      <main className="max-w-3xl mx-auto px-6 py-8">
+    <div className="max-w-3xl mx-auto px-6 py-8">
+      <div className="flex items-end justify-between mb-7">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-ink tracking-tight">Org Settings</h1>
+          <p className="text-sm text-dim mt-1">{membership.org.name}</p>
+        </div>
         {isAtLeast(membership.role as Role, Role.ADMIN) && (
-          <div className="mb-4 flex justify-end">
-            <Link
-              href="/audit"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800"
-            >
-              View Audit Log &rarr;
-            </Link>
-          </div>
+          <Link href="/audit" className="text-[12px] font-medium text-[var(--accent)] hover:underline">
+            View Audit Log →
+          </Link>
         )}
-        <OrgSettings
-          org={membership.org}
-          currentRole={membership.role}
-          currentUserId={session.user.id}
-          members={members}
-          pendingInvites={invites}
-        />
-      </main>
+      </div>
+      <OrgSettings
+        org={membership.org}
+        currentRole={membership.role}
+        currentUserId={session.user.id}
+        members={members}
+        pendingInvites={invites}
+      />
     </div>
   );
 }

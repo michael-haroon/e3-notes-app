@@ -16,6 +16,7 @@ export type LogAction =
   | "auth.logout"
   | "auth.login_failed"
   | "org.create"
+  | "org.delete"
   | "org.invite"
   | "org.join"
   | "org.role_change"

@@ -1,25 +1,14 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { getSessionWithOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 import { isAtLeast } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 
-async function getSession() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  if (!session.activeOrgId) throw new Error("No active org");
-  return {
-    user: { id: session.user.id, email: session.user.email },
-    orgId: session.activeOrgId,
-    role: (session.activeOrgRole ?? "MEMBER") as Role,
-  };
-}
-
 export async function createTag(name: string) {
-  const { user, orgId } = await getSession();
+  const { user, activeOrgId: orgId } = await getSessionWithOrg();
 
   const tag = await db.tag.upsert({
     where: { orgId_name: { orgId, name: name.toLowerCase().trim() } },
@@ -41,7 +30,7 @@ export async function createTag(name: string) {
 }
 
 export async function deleteTag(tagId: string) {
-  const { user, orgId, role } = await getSession();
+  const { user, activeOrgId: orgId, activeOrgRole: role } = await getSessionWithOrg();
 
   if (!isAtLeast(role, Role.ADMIN)) {
     throw new Error("Permission denied: must be ADMIN or OWNER to delete tags");
@@ -66,7 +55,7 @@ export async function deleteTag(tagId: string) {
 }
 
 export async function getOrgTags() {
-  const { orgId } = await getSession();
+  const { activeOrgId: orgId } = await getSessionWithOrg();
   return db.tag.findMany({
     where: { orgId },
     orderBy: { name: "asc" },

@@ -5,28 +5,24 @@ import Link from "next/link";
 import { Visibility } from "@/generated/prisma/enums";
 
 type SearchResult = {
-  id: string;
-  title: string;
-  content: string;
-  visibility: Visibility;
-  authorId: string;
-  authorName: string | null;
-  orgId: string;
-  createdAt: string;
-  updatedAt: string;
-  tags: string[];
-  rank: number;
+  id: string; title: string; content: string; visibility: Visibility;
+  authorId: string; authorName: string | null; orgId: string;
+  createdAt: string; updatedAt: string; tags: string[]; rank: number;
 };
-
 type Tag = { id: string; name: string };
 
 function highlightMatch(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text;
   const terms = query.trim().split(/\s+/).filter(Boolean);
-  const pattern = new RegExp(`(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+  const pattern = new RegExp(
+    `(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
+    "gi"
+  );
   const parts = text.split(pattern);
   return parts.map((part, i) =>
-    pattern.test(part) ? <mark key={i} className="bg-yellow-200 rounded px-0.5">{part}</mark> : part
+    pattern.test(part)
+      ? <mark key={i} className="bg-warn-soft text-warn rounded-[2px] px-0.5">{part}</mark>
+      : part
   );
 }
 
@@ -43,33 +39,22 @@ export function SearchView() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const LIMIT = 20;
 
-  // Auto-focus on mount
   useEffect(() => {
     inputRef.current?.focus();
-    fetch("/api/tags")
-      .then((r) => r.json())
-      .then((d) => setOrgTags(d.tags ?? []));
+    fetch("/api/tags").then((r) => r.json()).then((d) => setOrgTags(d.tags ?? []));
   }, []);
 
   const doSearch = useCallback(async (q: string, tags: string[], off: number) => {
     if (!q.trim() && tags.length === 0) {
-      setResults([]);
-      setSearched(false);
-      setLoading(false);
-      return;
+      setResults([]); setSearched(false); setLoading(false); return;
     }
     setLoading(true);
     try {
       const tagParams = tags.map((t) => `&tag=${encodeURIComponent(t)}`).join("");
-      const res = await fetch(
-        `/api/search?q=${encodeURIComponent(q)}&limit=${LIMIT}&offset=${off}${tagParams}`
-      );
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=${LIMIT}&offset=${off}${tagParams}`);
       const data = await res.json();
-      if (off === 0) {
-        setResults(data.results ?? []);
-      } else {
-        setResults((prev) => [...prev, ...(data.results ?? [])]);
-      }
+      if (off === 0) setResults(data.results ?? []);
+      else setResults((prev) => [...prev, ...(data.results ?? [])]);
       setTotal(data.total ?? 0);
       setSearched(true);
     } finally {
@@ -82,19 +67,12 @@ export function SearchView() {
     setQuery(q);
     setOffset(0);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(q, selectedTags, 0), 500);
+    debounceRef.current = setTimeout(() => doSearch(q, selectedTags, 0), 400);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      setQuery("");
-      setResults([]);
-      setSearched(false);
-    }
-    if (e.key === "Enter") {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      doSearch(query, selectedTags, 0);
-    }
+    if (e.key === "Escape") { setQuery(""); setResults([]); setSearched(false); }
+    if (e.key === "Enter") { if (debounceRef.current) clearTimeout(debounceRef.current); doSearch(query, selectedTags, 0); }
   }
 
   function toggleTag(tagName: string) {
@@ -115,38 +93,42 @@ export function SearchView() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold mb-4">Search Notes</h2>
-        <div className="flex gap-3">
+      {/* Search input */}
+      <div className="flex gap-2">
+        <div className="flex-1 relative">
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={handleQueryChange}
             onKeyDown={handleKeyDown}
-            placeholder="Search by title, content, or tags… (Esc to clear)"
-            className="flex-1 border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Search notes… (Enter to search, Esc to clear)"
+            className="w-full bg-surface border border-[var(--border-color)] rounded-card pl-10 pr-4 py-2.5 text-[14px] text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-colors"
           />
-          <button
-            onClick={() => doSearch(query, selectedTags, 0)}
-            disabled={loading}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? "Searching..." : "Search"}
-          </button>
         </div>
+        <button
+          onClick={() => doSearch(query, selectedTags, 0)}
+          disabled={loading}
+          className="px-5 py-2.5 bg-[var(--accent)] text-white rounded-card text-[13px] font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors whitespace-nowrap"
+        >
+          {loading ? "…" : "Search"}
+        </button>
       </div>
 
+      {/* Tag filters */}
       {orgTags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {orgTags.map((tag) => (
             <button
               key={tag.id}
               onClick={() => toggleTag(tag.name)}
-              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+              className={`text-[12px] px-3 py-1 rounded-full border transition-colors ${
                 selectedTags.includes(tag.name)
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                  ? "bg-[var(--accent)] text-white border-[var(--accent)]"
+                  : "bg-surface text-dim border-[var(--border-color)] hover:border-[var(--accent)]"
               }`}
             >
               #{tag.name}
@@ -155,70 +137,71 @@ export function SearchView() {
         </div>
       )}
 
+      {/* Results count */}
       {searched && (
-        <p className="text-sm text-gray-500">
-          Showing {results.length} of {total} result{total !== 1 ? "s" : ""}
-          {query && <> for &quot;{query}&quot;</>}
-          {selectedTags.length > 0 && <> with tag{selectedTags.length > 1 ? "s" : ""} {selectedTags.map((t) => `#${t}`).join(", ")}</>}
+        <p className="text-[12px] text-dim">
+          {results.length} of {total} result{total !== 1 ? "s" : ""}
+          {query && <> for <span className="text-ink font-medium">&quot;{query}&quot;</span></>}
+          {selectedTags.length > 0 && <> · tagged {selectedTags.map((t) => `#${t}`).join(", ")}</>}
         </p>
       )}
 
+      {/* Skeleton loading */}
       {loading && results.length === 0 && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-xl border p-5 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2" />
-              <div className="h-3 bg-gray-100 rounded w-3/4" />
+            <div key={i} className="bg-surface border border-[var(--border-color)] rounded-card p-5">
+              <div className="skeleton h-4 w-1/2 mb-2.5" />
+              <div className="skeleton h-3 w-3/4" />
             </div>
           ))}
         </div>
       )}
 
+      {/* Results */}
       {results.length > 0 && (
         <>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {results.map((note) => (
               <Link
                 key={note.id}
                 href={`/notes/${note.id}`}
-                className="block bg-white rounded-xl border p-5 hover:shadow-sm transition-shadow"
+                className="group flex items-start gap-4 bg-surface border border-[var(--border-color)] rounded-card px-5 py-4 hover:shadow-card hover:border-[var(--border-strong)] transition-all"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate mb-1">
-                      {highlightMatch(note.title, query)}
-                    </h3>
-                    <p className="text-sm text-gray-500 truncate">
-                      {highlightMatch(note.content.slice(0, 200) || "No content", query)}
-                    </p>
-                    {note.tags.length > 0 && (
-                      <div className="flex gap-1 mt-2 flex-wrap">
-                        {note.tags.map((t) => (
-                          <span key={t} className={`text-xs px-2 py-0.5 rounded-full ${selectedTags.includes(t) ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
-                            #{t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-400 shrink-0 text-right">
-                    <p>{note.authorName ?? "Unknown"}</p>
-                    <p>{new Date(note.updatedAt).toLocaleDateString()}</p>
-                    <p className="mt-1 capitalize">{note.visibility.toLowerCase()}</p>
-                  </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-ink text-[14px] truncate mb-1 group-hover:text-[var(--accent)] transition-colors">
+                    {highlightMatch(note.title, query)}
+                  </h3>
+                  <p className="text-[13px] text-dim line-clamp-1">
+                    {highlightMatch(note.content.slice(0, 200) || "No content", query)}
+                  </p>
+                  {note.tags.length > 0 && (
+                    <div className="flex gap-1.5 mt-2 flex-wrap">
+                      {note.tags.map((t) => (
+                        <span key={t} className={`text-[11px] px-2 py-0.5 rounded-full ${selectedTags.includes(t) ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "bg-subtle text-dim"}`}>
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="text-[12px] text-muted shrink-0 text-right space-y-0.5">
+                  <p className="text-dim">{note.authorName ?? "Unknown"}</p>
+                  <p>{new Date(note.updatedAt).toLocaleDateString()}</p>
+                  <p className="capitalize text-[11px]">{note.visibility.toLowerCase()}</p>
                 </div>
               </Link>
             ))}
           </div>
 
           {results.length < total && (
-            <div className="text-center">
+            <div className="text-center pt-2">
               <button
                 onClick={loadMore}
                 disabled={loading}
-                className="px-6 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                className="px-5 py-2 border border-[var(--border-color)] text-dim text-[13px] rounded-card hover:bg-subtle disabled:opacity-50 transition-colors"
               >
-                {loading ? "Loading..." : `Load more (${total - results.length} remaining)`}
+                {loading ? "Loading…" : `Load more (${total - results.length} remaining)`}
               </button>
             </div>
           )}
@@ -226,8 +209,11 @@ export function SearchView() {
       )}
 
       {searched && results.length === 0 && !loading && (
-        <div className="text-center py-12 text-gray-500">
-          <p>No notes found{query && <> for &quot;{query}&quot;</>}</p>
+        <div className="text-center py-14 text-dim">
+          <p className="text-[14px] font-medium text-ink mb-1">No results found</p>
+          <p className="text-[13px]">
+            {query ? `No notes match "${query}"` : "Try searching for something"}
+          </p>
         </div>
       )}
     </div>

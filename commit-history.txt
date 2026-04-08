@@ -1,0 +1,4 @@
+4a78594 feat(ai-logging-seed): pino helpers, AI rate limit+retry, audit log viewer, seed improvements
+03de6b3 feat(files): file delete, file list API, drag-drop FileUploader component
+bd57c42 feat: tags, sharing, versioning restore+diff, search improvements
+2681069 feat: MVP scaffold — auth, orgs, notes CRUD, permissions, FTS, Docker

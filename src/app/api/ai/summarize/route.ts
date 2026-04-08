@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { generateNoteSummary } from "@/lib/ai";
 import { canReadNote } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
-import { Role } from "@/generated/prisma";
+import { Role } from "@/generated/prisma/enums";
 
 // In-memory rate limiter: max 10 requests per hour per user
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
+
+  // Purge expired entries to prevent unbounded memory growth
+  rateLimitMap.forEach((val, key) => {
+    if (val.resetAt < now) rateLimitMap.delete(key);
+  });
+
   const entry = rateLimitMap.get(userId);
   if (!entry || entry.resetAt < now) {
     rateLimitMap.set(userId, { count: 1, resetAt: now + 60 * 60 * 1000 });
@@ -22,8 +28,10 @@ function checkRateLimit(userId: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  let session;
+  try {
+    session = await getSession();
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -93,8 +101,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  let session;
+  try {
+    session = await getSession();
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -158,8 +168,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  let session;
+  try {
+    session = await getSession();
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

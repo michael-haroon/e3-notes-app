@@ -131,3 +131,78 @@
 **Description:** Dashboard no-org state only showed "Create Organization". Users who had been invited couldn't access /invites without knowing the URL.
 **Fix:** No-org landing page now prominently shows pending invite count and a "Check Invites" button. Create org is secondary. Sign out always visible.
 **Status:** Fixed
+
+## Bug 020: ADMIN sees Remove button on OWNER members
+**Found:** Code review
+**Severity:** High — incorrect permission display
+**Description:** The Remove button was shown to ADMIN users next to OWNER members, even though ADMINs cannot remove OWNERs. Clicking would silently fail.
+**Fix:** `canCallerRemove()` helper in OrgSettings checks: OWNER can remove anyone (except self), ADMIN can only remove MEMBERs, MEMBERs can remove no one.
+**Status:** Fixed
+
+## Bug 021: deleteOrg audit log recorded wrong action
+**Found:** Code review
+**Severity:** Low — incorrect audit trail
+**Description:** `deleteOrg` server action was logging `action: "org.create"` instead of `"org.delete"` — a copy-paste error.
+**Fix:** Changed to `"org.delete"`. Added `"org.delete"` to the `LogAction` type in `logger.ts`.
+**Status:** Fixed
+
+## Bug 022: parseInt NaN crashes search route
+**Found:** Edge case analysis
+**Severity:** Medium — server crash on invalid query params
+**Description:** `Math.min(parseInt("abc"), 100)` returns `NaN`, which causes unexpected DB query behavior.
+**Fix:** Added `isNaN()` guards: `const limit = Math.min(isNaN(raw) ? 20 : raw, 100)`.
+**Status:** Fixed
+
+## Bug 023: Content-Disposition filename injection
+**Found:** Security audit
+**Severity:** Medium — malformed HTTP headers
+**Description:** `Content-Disposition: inline; filename="${file.filename}"` — a filename containing `"` would break the header.
+**Fix:** Switched to RFC 5987 encoding: `filename*=UTF-8''${encodeURIComponent(filename)}`.
+**Status:** Fixed
+
+## Bug 024: Rate limiter memory leak in AI summarize route
+**Found:** Code review
+**Severity:** Medium — server memory grows unbounded
+**Description:** `rateLimitMap` (Map) never deleted old entries. Over hours/days in production, every user who ever called the AI endpoint would remain in memory.
+**Fix:** Added `rateLimitMap.forEach(...)` purge of expired entries at the start of each `checkRateLimit()` call.
+**Status:** Fixed
+
+## Bug 025: VersionsView stuck on "Loading..." on error
+**Found:** Testing
+**Severity:** Medium — UX dead end
+**Description:** If `loadVersions()` threw, the `finally` block wasn't reached, leaving `loading` true forever.
+**Fix:** Moved `setLoading(false)` to `finally` block; added a visible error state with a Retry button.
+**Status:** Fixed
+
+## Bug 026: Clerk signup causes history.replaceState infinite loop
+**Found:** Production testing
+**Severity:** Critical — app unusable after signup
+**Description:** After Clerk signup, `(app)/layout.tsx` called `getSession()` which failed (DB error), caught the error and redirected to `/login`. `/login` saw an active Clerk session and redirected to `/dashboard`. Clerk's client-side code looped 100+ times until browser threw `SecurityError: Attempt to use history.replaceState() more than 100 times`.
+**Root causes:**
+  1. `passwordHash` was still `NOT NULL` in Docker DB — upsert of new Clerk user (no password) failed
+  2. `(app)/layout.tsx` redirected to `/login` on ANY `getSession()` error, not just auth failures
+**Fix:** 
+  - Migration `20260408_add_clerk_id` drops `NOT NULL` from `passwordHash`
+  - Layout now uses Clerk's `auth()` for redirect guard (only redirects on auth failure); DB errors show error page instead
+**Status:** Fixed
+
+## Bug 027: Race condition creates duplicate user on first Clerk login
+**Found:** Production testing
+**Severity:** High — `Unique constraint failed on ("clerkId")`
+**Description:** When a new Clerk user first hits the dashboard, multiple parallel server requests all call `getSession()`. Each finds no DB user and tries to INSERT. The first succeeds; the rest fail with unique constraint violation on `clerkId`.
+**Fix:** Wrapped upsert in try/catch; on unique constraint error, fetches the already-created row instead of re-throwing.
+**Status:** Fixed
+
+## Bug 028: Server action error messages stripped in production
+**Found:** Production testing
+**Severity:** High — users see generic "An error occurred" instead of actionable messages
+**Description:** Next.js strips `Error.message` from server actions in production mode. All `throw new Error("...")` calls in actions were silently becoming `"An error occurred in the Server Components render"` on the client.
+**Fix:** Refactored all user-facing org server actions to return `{ success: false, error: string }` instead of throwing. Client components check `result.success` instead of using try/catch. New `Result<T>` type with `ok()` / `err()` helpers.
+**Status:** Fixed
+
+## Bug 029: Auth route `/login/factor-one` not found
+**Found:** Testing
+**Severity:** High — Clerk multi-step flows broken
+**Description:** Without catch-all routes, Clerk's path routing would navigate to `/login/factor-one` (for MFA/OTP verification steps) which had no handler.
+**Fix:** Converted `/login/page.tsx` → `/login/[[...login]]/page.tsx` and `/register/page.tsx` → `/register/[[...register]]/page.tsx`. Added `routing="path"` with `path="/login"` to the Clerk components.
+**Status:** Fixed

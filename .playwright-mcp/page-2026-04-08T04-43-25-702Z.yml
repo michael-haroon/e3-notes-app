@@ -1,0 +1,136 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e7]:
+          - img [ref=e9]
+          - generic [ref=e11]: TeamNotes
+        - generic [ref=e13]:
+          - combobox [ref=e14] [cursor=pointer]:
+            - option "Acme Corp" [selected]
+            - option "Beta Labs"
+          - img
+        - navigation [ref=e15]:
+          - link "Notes" [ref=e16] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e18]
+            - generic [ref=e20]: Notes
+          - link "Search" [ref=e21] [cursor=pointer]:
+            - /url: /search
+            - img [ref=e23]
+            - generic [ref=e25]: Search
+          - link "Invites" [ref=e26] [cursor=pointer]:
+            - /url: /invites
+            - img [ref=e28]
+            - generic [ref=e30]: Invites
+          - link "Org Settings" [ref=e31] [cursor=pointer]:
+            - /url: /orgs
+            - img [ref=e33]
+            - generic [ref=e35]: Org Settings
+          - link "Audit Log" [ref=e36] [cursor=pointer]:
+            - /url: /audit
+            - img [ref=e38]
+            - generic [ref=e40]: Audit Log
+          - link "New Note" [ref=e42] [cursor=pointer]:
+            - /url: /notes/new
+            - img [ref=e43]
+            - text: New Note
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - generic [ref=e47]: U2
+            - generic [ref=e48]:
+              - paragraph [ref=e49]: User 2
+              - paragraph [ref=e50]: user2@example.com
+            - button "Toggle dark mode" [ref=e51] [cursor=pointer]:
+              - img [ref=e52]
+          - button "Sign out" [ref=e54] [cursor=pointer]:
+            - img [ref=e55]
+            - text: Sign out
+    - main [ref=e58]:
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - heading "Org Settings" [level=1] [ref=e62]
+            - paragraph [ref=e63]: Acme Corp
+          - link "View Audit Log →" [ref=e64] [cursor=pointer]:
+            - /url: /audit
+        - generic [ref=e65]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - heading "Acme Corp" [level=2] [ref=e69]
+              - paragraph [ref=e70]:
+                - text: "Slug:"
+                - code [ref=e71]: acme-corp
+            - generic [ref=e72]: Admin
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - heading "Members" [level=3] [ref=e75]
+              - generic [ref=e76]: "6"
+            - generic [ref=e77]:
+              - generic [ref=e78]:
+                - generic [ref=e79]:
+                  - generic [ref=e80]: U
+                  - generic [ref=e81]:
+                    - paragraph [ref=e82]: User 1
+                    - paragraph [ref=e83]: user1@example.com
+                - generic [ref=e85]: Owner
+              - generic [ref=e86]:
+                - generic [ref=e87]:
+                  - generic [ref=e88]: U
+                  - generic [ref=e89]:
+                    - paragraph [ref=e90]: User 2(you)
+                    - paragraph [ref=e91]: user2@example.com
+                - generic [ref=e93]: Admin
+              - generic [ref=e94]:
+                - generic [ref=e95]:
+                  - generic [ref=e96]: U
+                  - generic [ref=e97]:
+                    - paragraph [ref=e98]: User 3
+                    - paragraph [ref=e99]: user3@example.com
+                - generic [ref=e100]:
+                  - generic [ref=e101]: Member
+                  - button "Remove" [ref=e102] [cursor=pointer]
+              - generic [ref=e103]:
+                - generic [ref=e104]:
+                  - generic [ref=e105]: U
+                  - generic [ref=e106]:
+                    - paragraph [ref=e107]: User 4
+                    - paragraph [ref=e108]: user4@example.com
+                - generic [ref=e109]:
+                  - generic [ref=e110]: Member
+                  - button "Remove" [ref=e111] [cursor=pointer]
+              - generic [ref=e112]:
+                - generic [ref=e113]:
+                  - generic [ref=e114]: U
+                  - generic [ref=e115]:
+                    - paragraph [ref=e116]: User 5
+                    - paragraph [ref=e117]: user5@example.com
+                - generic [ref=e118]:
+                  - generic [ref=e119]: Member
+                  - button "Remove" [ref=e120] [cursor=pointer]
+              - generic [ref=e121]:
+                - generic [ref=e122]:
+                  - generic [ref=e123]: U
+                  - generic [ref=e124]:
+                    - paragraph [ref=e125]: User 6
+                    - paragraph [ref=e126]: user6@example.com
+                - generic [ref=e127]:
+                  - generic [ref=e128]: Member
+                  - button "Remove" [ref=e129] [cursor=pointer]
+          - generic [ref=e130]:
+            - heading "Invite Member" [level=3] [ref=e132]
+            - generic [ref=e133]:
+              - generic [ref=e143]:
+                - img [ref=e144]
+                - text: User doesn't exist! Make sure they've registered an account first.
+              - generic [ref=e134]:
+                - textbox "colleague@example.com" [ref=e135]: nobody_registered@example.com
+                - combobox [ref=e136]:
+                  - option "Member" [selected]
+                  - option "Admin"
+                - button "Send Invite" [ref=e137] [cursor=pointer]
+          - generic [ref=e138]:
+            - heading "Danger Zone" [level=3] [ref=e139]
+            - paragraph [ref=e140]: These actions cannot be undone.
+            - button "Leave org" [ref=e142] [cursor=pointer]

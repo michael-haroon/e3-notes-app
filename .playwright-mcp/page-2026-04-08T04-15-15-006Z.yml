@@ -1,0 +1,7 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e154]:
+    - heading "Something went wrong" [level=1] [ref=e155]
+    - paragraph [ref=e156]: We couldn't load your profile. Please try refreshing.
+    - link "Refresh" [ref=e157] [cursor=pointer]:
+      - /url: /dashboard
