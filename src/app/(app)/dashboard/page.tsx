@@ -49,26 +49,40 @@ export default async function DashboardPage() {
   const role = (session.activeOrgRole ?? "MEMBER") as Role;
   const isPrivileged = isAtLeast(role, Role.ADMIN);
 
-  const notes = await db.note.findMany({
-    where: {
-      orgId,
-      ...(isPrivileged
-        ? {}
-        : {
-            OR: [
-              { visibility: Visibility.ORG },
-              { authorId: userId },
-              { shares: { some: { userId } } },
-            ],
-          }),
-    },
-    include: {
-      author: { select: { id: true, name: true, email: true } },
-      tags: { include: { tag: true } },
-      _count: { select: { versions: true, files: true } },
-    },
-    orderBy: [{ pinnedAt: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }],
-  });
+  const noteWhere = {
+    orgId,
+    ...(isPrivileged
+      ? {}
+      : {
+          OR: [
+            { visibility: Visibility.ORG },
+            { authorId: userId },
+            { shares: { some: { userId } } },
+          ],
+        }),
+  };
+
+  const [notes, totalNotes] = await Promise.all([
+    db.note.findMany({
+      where: noteWhere,
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        visibility: true,
+        authorId: true,
+        pinnedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        author: { select: { id: true, name: true, email: true } },
+        tags: { select: { tag: { select: { id: true, name: true } } } },
+        _count: { select: { versions: true, files: true } },
+      },
+      orderBy: [{ pinnedAt: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }],
+      take: 100,
+    }),
+    db.note.count({ where: noteWhere }),
+  ]);
 
   const authorMap = new Map<string, { id: string; label: string }>();
   for (const note of notes) {
@@ -105,6 +119,7 @@ export default async function DashboardPage() {
 
       <NotesWorkspace
         notes={notes}
+        totalNotes={totalNotes}
         currentUserId={userId}
         authors={authors}
       />

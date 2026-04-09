@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Visibility } from "@/generated/prisma/enums";
 
 export type NoteListNote = {
@@ -38,6 +41,9 @@ export function NoteList({
   selectedIds?: string[];
   onToggleSelect?: (id: string) => void;
 }) {
+  const router = useRouter();
+  const selectedSet = new Set(selectedIds);
+
   if (notes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -63,7 +69,7 @@ export function NoteList({
       {notes.map((note) => {
         const isOwn = note.authorId === currentUserId;
         const isPinned = !!note.pinnedAt;
-        const isSelected = selectedIds.includes(note.id);
+        const isSelected = selectedSet.has(note.id);
         const preview = note.content.replace(/\n+/g, " ").trim();
         const daysSince = Math.floor((Date.now() - new Date(note.updatedAt).getTime()) / 86_400_000);
         const dateLabel =
@@ -78,17 +84,19 @@ export function NoteList({
             : "border-[var(--border-color)] hover:shadow-card hover:border-[var(--border-strong)]"
         }`;
 
-        if (selectionMode) {
-          return (
-            <div
-              key={note.id}
-              data-testid="note-card"
-              data-note-visibility={note.visibility}
-              data-note-author={isOwn ? "You" : (note.author.name ?? note.author.email)}
-              className={cardClasses}
-              onClick={() => onToggleSelect?.(note.id)}
-            >
-              {/* Checkbox */}
+        return (
+          <div
+            key={note.id}
+            data-testid="note-card"
+            data-note-visibility={note.visibility}
+            data-note-author={isOwn ? "You" : (note.author.name ?? note.author.email)}
+            className={cardClasses}
+            onClick={() => {
+              if (selectionMode) onToggleSelect?.(note.id);
+              else router.push(`/notes/${note.id}`);
+            }}
+          >
+            {selectionMode && (
               <div className={`w-4 h-4 rounded border-2 shrink-0 mt-0.5 flex items-center justify-center transition-colors ${
                 isSelected ? "bg-[var(--accent)] border-[var(--accent)]" : "border-[var(--border-strong)] bg-surface"
               }`}>
@@ -98,22 +106,9 @@ export function NoteList({
                   </svg>
                 )}
               </div>
-              <NoteCardContent note={note} isOwn={isOwn} isPinned={isPinned} preview={preview} dateLabel={dateLabel} />
-            </div>
-          );
-        }
-
-        return (
-          <Link
-            key={note.id}
-            href={`/notes/${note.id}`}
-            data-testid="note-card"
-            data-note-visibility={note.visibility}
-            data-note-author={isOwn ? "You" : (note.author.name ?? note.author.email)}
-            className={cardClasses}
-          >
+            )}
             <NoteCardContent note={note} isOwn={isOwn} isPinned={isPinned} preview={preview} dateLabel={dateLabel} />
-          </Link>
+          </div>
         );
       })}
     </div>

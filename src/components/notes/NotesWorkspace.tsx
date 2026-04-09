@@ -36,10 +36,12 @@ const visibilityOptions = [
 
 export function NotesWorkspace({
   notes,
+  totalNotes,
   authors,
   currentUserId,
 }: {
   notes: NoteListNote[];
+  totalNotes: number;
   authors: AuthorOption[];
   currentUserId: string;
 }) {
@@ -167,6 +169,9 @@ export function NotesWorkspace({
             </div>
             <p className="text-[12px] text-dim">
               {filteredNotes.length} of {notes.length} note{notes.length !== 1 ? "s" : ""}
+              {totalNotes > notes.length && (
+                <span className="text-muted"> · showing {notes.length} most recent of {totalNotes} total</span>
+              )}
             </p>
           </div>
 
