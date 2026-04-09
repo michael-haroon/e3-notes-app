@@ -13,8 +13,9 @@ import {
   canWriteNote,
   canChangeVisibility,
   canDeleteNote,
+  isAtLeast,
 } from "@/lib/permissions";
-import { Visibility } from "@/generated/prisma/enums";
+import { Visibility, Role } from "@/generated/prisma/enums";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -422,4 +423,83 @@ export async function getNoteWithPermission(noteId: string) {
   });
 
   return note;
+}
+
+const NOTE_LIST_SELECT = {
+  id: true,
+  title: true,
+  content: true,
+  visibility: true,
+  authorId: true,
+  pinnedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  author: { select: { id: true, name: true, email: true } },
+  tags: { select: { tag: { select: { id: true, name: true } } } },
+  _count: { select: { versions: true, files: true } },
+} as const;
+
+function buildNoteWhere(orgId: string, userId: string, isPrivileged: boolean) {
+  return {
+    orgId,
+    ...(isPrivileged
+      ? {}
+      : {
+          OR: [
+            { visibility: Visibility.ORG },
+            { authorId: userId },
+            { shares: { some: { userId } } },
+          ],
+        }),
+  };
+}
+
+type NoteSort = "recent" | "oldest" | "title-asc" | "title-desc";
+
+function buildOrderBy(sort: NoteSort) {
+  const pinFirst = { pinnedAt: { sort: "desc" as const, nulls: "last" as const } };
+  switch (sort) {
+    case "oldest":    return [pinFirst, { updatedAt: "asc"  as const }];
+    case "title-asc": return [pinFirst, { title:     "asc"  as const }];
+    case "title-desc":return [pinFirst, { title:     "desc" as const }];
+    case "recent":
+    default:          return [pinFirst, { updatedAt: "desc" as const }];
+  }
+}
+
+export async function loadMoreNotes(skip: number, sort: NoteSort = "recent") {
+  const { user, orgId, role } = await getSession();
+  const isPrivileged = isAtLeast(role as Role, Role.ADMIN);
+  return db.note.findMany({
+    where: buildNoteWhere(orgId, user.id, isPrivileged),
+    select: NOTE_LIST_SELECT,
+    orderBy: buildOrderBy(sort),
+    take: 100,
+    skip,
+  });
+}
+
+export async function searchNotes(query: string) {
+  const { user, orgId, role } = await getSession();
+  const isPrivileged = isAtLeast(role as Role, Role.ADMIN);
+  const q = query.trim();
+  if (!q) return [];
+  return db.note.findMany({
+    where: {
+      AND: [
+        buildNoteWhere(orgId, user.id, isPrivileged),
+        {
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { content: { contains: q, mode: "insensitive" } },
+            { tags: { some: { tag: { name: { contains: q, mode: "insensitive" } } } } },
+            { author: { OR: [{ name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }] } },
+          ],
+        },
+      ],
+    },
+    select: NOTE_LIST_SELECT,
+    orderBy: [{ pinnedAt: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }],
+    take: 50,
+  });
 }

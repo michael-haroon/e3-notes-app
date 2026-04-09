@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Visibility } from "@/generated/prisma/enums";
 import { NoteList, type NoteListNote } from "@/components/notes/NoteList";
-import { bulkDeleteNotes } from "@/actions/notes";
+import { bulkDeleteNotes, loadMoreNotes, searchNotes } from "@/actions/notes";
 import { getActionError } from "@/lib/action-error";
 import {
   createNotesWorkspaceSearchParams,
@@ -35,7 +35,7 @@ const visibilityOptions = [
 ] as const;
 
 export function NotesWorkspace({
-  notes,
+  notes: initialNotes,
   totalNotes,
   authors,
   currentUserId,
@@ -62,6 +62,25 @@ export function NotesWorkspace({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+
+  // Infinite scroll state
+  const [allNotes, setAllNotes] = useState<NoteListNote[]>(initialNotes);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(totalNotes > initialNotes.length);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  // Track the sort that was used to fetch the current allNotes so we know when to re-fetch
+  const loadedSortRef = useRef<SortOption>("recent");
+
+  // Server search state
+  const [searchResults, setSearchResults] = useState<NoteListNote[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Reset when server re-renders (e.g. after router.refresh())
+  useEffect(() => {
+    setAllNotes(initialNotes);
+    setHasMore(totalNotes > initialNotes.length);
+    setSearchResults(null);
+  }, [initialNotes, totalNotes]);
 
   useEffect(() => {
     setQuery(urlFilters.query);
@@ -95,7 +114,96 @@ export function NotesWorkspace({
     window.history.replaceState(window.history.state, "", nextUrl);
   }, [pathname, query, searchParams, selectedAuthorId, selectedVisibility, sortBy]);
 
-  const filteredNotes = useMemo(() => filterAndSortNotes(notes, filters), [filters, notes]);
+  // Debounced server-side search
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setSearchResults(null);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchNotes(trimmed);
+        setSearchResults(results as NoteListNote[]);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Re-fetch from DB when sort changes (sort must be server-side across all notes)
+  useEffect(() => {
+    if (sortBy === loadedSortRef.current) return;
+    loadedSortRef.current = sortBy;
+    setLoadingMore(true);
+    loadMoreNotes(0, sortBy)
+      .then((fresh) => {
+        setAllNotes(fresh as NoteListNote[]);
+        setHasMore(fresh.length < totalNotes);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  }, [sortBy, totalNotes]);
+
+  // Infinite scroll via IntersectionObserver
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const more = await loadMoreNotes(allNotes.length, sortBy);
+      if (more.length === 0) {
+        setHasMore(false);
+      } else {
+        setAllNotes((prev) => [...prev, ...(more as NoteListNote[])]);
+        setHasMore(allNotes.length + more.length < totalNotes);
+      }
+    } catch {
+      // silently fail — user can scroll again
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, allNotes.length, totalNotes, sortBy]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) handleLoadMore();
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [handleLoadMore]);
+
+  const isSearchMode = query.trim().length > 0;
+
+  // When searching: apply author/visibility filters on server results (skip text + sort — server handled both)
+  // When browsing: filter only — DB order is authoritative, don't re-sort client-side
+  const filteredNotes = useMemo(() => {
+    if (isSearchMode && searchResults !== null) {
+      return filterAndSortNotes(searchResults, { ...filters, query: "" });
+    }
+    if (!isSearchMode) {
+      return allNotes.filter((note) => {
+        const matchesAuthor = !filters.authorId || note.authorId === filters.authorId;
+        const matchesVisibility = filters.visibility === "all" || note.visibility === filters.visibility;
+        return matchesAuthor && matchesVisibility;
+      });
+    }
+    return [];
+  }, [filters, allNotes, searchResults, isSearchMode]);
+
   const hasActiveFilters = hasActiveNotesWorkspaceFilters({
     query,
     authorId: selectedAuthorId,
@@ -140,7 +248,6 @@ export function NotesWorkspace({
       setSelectedIds([]);
       setSelectionMode(false);
       router.refresh();
-      // Brief success message
       alert(`Deleted ${result.deleted} note${result.deleted !== 1 ? "s" : ""}.`);
     } catch (err) {
       setBulkError(getActionError(err, "Bulk delete failed"));
@@ -148,6 +255,21 @@ export function NotesWorkspace({
       setBulkDeleting(false);
     }
   }
+
+  // Counter line
+  const counterText = (() => {
+    if (isSearchMode) {
+      if (isSearching) return "Searching…";
+      if (searchResults === null) return null;
+      return `${filteredNotes.length} result${filteredNotes.length !== 1 ? "s" : ""} across all notes`;
+    }
+    const loaded = allNotes.length;
+    const shown = filteredNotes.length;
+    if (loaded < totalNotes) {
+      return `${shown} of ${loaded} loaded · ${totalNotes} total`;
+    }
+    return `${shown} of ${totalNotes} note${totalNotes !== 1 ? "s" : ""}`;
+  })();
 
   return (
     <div className="space-y-5">
@@ -166,13 +288,14 @@ export function NotesWorkspace({
                 placeholder="Search by title, content, tag, or author"
                 className="ui-input w-full py-2.5 pl-10 pr-4 text-[14px]"
               />
-            </div>
-            <p className="text-[12px] text-dim">
-              {filteredNotes.length} of {notes.length} note{notes.length !== 1 ? "s" : ""}
-              {totalNotes > notes.length && (
-                <span className="text-muted"> · showing {notes.length} most recent of {totalNotes} total</span>
+              {isSearching && (
+                <svg className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
               )}
-            </p>
+            </div>
+            {counterText && <p className="text-[12px] text-dim">{counterText}</p>}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -292,14 +415,31 @@ export function NotesWorkspace({
         </div>
       )}
 
-      {filteredNotes.length > 0 ? (
-        <NoteList
-          notes={filteredNotes}
-          currentUserId={currentUserId}
-          selectionMode={selectionMode}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-        />
+      {filteredNotes.length > 0 || isSearching ? (
+        <>
+          <NoteList
+            notes={filteredNotes}
+            currentUserId={currentUserId}
+            selectionMode={selectionMode}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+          />
+
+          {/* Infinite scroll sentinel — only shown in browse mode */}
+          {!isSearchMode && (
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              {loadingMore && (
+                <svg className="h-5 w-5 animate-spin text-muted" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              )}
+              {!hasMore && allNotes.length > 0 && !loadingMore && (
+                <p className="text-[12px] text-muted">All {totalNotes} notes loaded</p>
+              )}
+            </div>
+          )}
+        </>
       ) : (
         <div className="ui-card flex flex-col items-center justify-center px-6 py-20 text-center">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-subtle">
