@@ -67,7 +67,7 @@ export default async function DashboardPage() {
       tags: { include: { tag: true } },
       _count: { select: { versions: true, files: true } },
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ pinnedAt: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }],
   });
 
   const authorMap = new Map<string, { id: string; label: string }>();

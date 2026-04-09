@@ -84,6 +84,11 @@ export function filterAndSortNotes(notes: NoteListNote[], filters: NotesWorkspac
   });
 
   return [...matches].sort((a, b) => {
+    // Pinned notes always appear first
+    const aPinned = a.pinnedAt ? 1 : 0;
+    const bPinned = b.pinnedAt ? 1 : 0;
+    if (bPinned !== aPinned) return bPinned - aPinned;
+
     switch (filters.sortBy) {
       case "oldest":
         return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();

@@ -38,7 +38,16 @@ export type LogAction =
   | "ai.summarize"
   | "ai.accept"
   | "ai.permission_denied"
-  | "search.query";
+  | "search.query"
+  | "note.pin"
+  | "note.unpin"
+  | "note.bulk_delete"
+  | "note.export"
+  | "comment.create"
+  | "comment.delete"
+  | "template.create"
+  | "template.delete"
+  | "template.use";
 
 export function logRequest(method: string, pathname: string, userId?: string, durationMs?: number, status?: number) {
   logger.info({ method, pathname, userId, durationMs, status }, "http");

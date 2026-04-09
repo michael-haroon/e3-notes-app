@@ -84,6 +84,7 @@ const updateNoteSchema = z.object({
   content: z.string().optional(),
   visibility: z.nativeEnum(Visibility).optional(),
   tagIds: z.array(z.string()).optional(),
+  expectedUpdatedAt: z.string().optional(), // ISO string for conflict detection
 });
 
 export async function updateNote(input: z.infer<typeof updateNoteSchema>) {
@@ -101,6 +102,15 @@ export async function updateNote(input: z.infer<typeof updateNoteSchema>) {
     visibility: note.visibility,
     orgId: note.orgId,
   };
+
+  // Conflict detection: if caller passed expectedUpdatedAt, check it hasn't changed
+  if (data.expectedUpdatedAt) {
+    const expected = new Date(data.expectedUpdatedAt).getTime();
+    const actual = new Date(note.updatedAt).getTime();
+    if (Math.abs(actual - expected) > 1000) {
+      throw appError("This note was edited by someone else while you were writing. Reload to see the latest version before saving.");
+    }
+  }
 
   if (!canWriteNote({ id: user.id, email: user.email }, { orgId, role }, noteCtx)) {
     await writeAuditLog({
@@ -272,6 +282,77 @@ export async function unshareNote(noteId: string, shareWithUserId: string) {
 
   revalidatePath(`/notes/${noteId}`);
   return { success: true };
+}
+
+export async function pinNote(noteId: string) {
+  const { user, orgId, role } = await getSession();
+
+  const note = await db.note.findUnique({ where: { id: noteId } });
+  if (!note) throw appError("Note not found");
+
+  const noteCtx = { authorId: note.authorId, visibility: note.visibility, orgId: note.orgId };
+  if (!canReadNote({ id: user.id, email: user.email }, { orgId, role }, noteCtx)) {
+    throw appError("Permission denied");
+  }
+
+  await db.note.update({ where: { id: noteId }, data: { pinnedAt: new Date() } });
+
+  await writeAuditLog({ action: "note.pin", userId: user.id, orgId, resourceId: noteId, resourceType: "note" });
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function unpinNote(noteId: string) {
+  const { user, orgId, role } = await getSession();
+
+  const note = await db.note.findUnique({ where: { id: noteId } });
+  if (!note) throw appError("Note not found");
+
+  const noteCtx = { authorId: note.authorId, visibility: note.visibility, orgId: note.orgId };
+  if (!canReadNote({ id: user.id, email: user.email }, { orgId, role }, noteCtx)) {
+    throw appError("Permission denied");
+  }
+
+  await db.note.update({ where: { id: noteId }, data: { pinnedAt: null } });
+
+  await writeAuditLog({ action: "note.unpin", userId: user.id, orgId, resourceId: noteId, resourceType: "note" });
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function bulkDeleteNotes(noteIds: string[]) {
+  const { user, orgId, role } = await getSession();
+
+  if (noteIds.length === 0) throw appError("No notes selected");
+  if (noteIds.length > 50) throw appError("Cannot bulk delete more than 50 notes at once");
+
+  const notes = await db.note.findMany({
+    where: { id: { in: noteIds }, orgId },
+  });
+
+  const deletable: string[] = [];
+  for (const note of notes) {
+    const noteCtx = { authorId: note.authorId, visibility: note.visibility, orgId: note.orgId };
+    if (canDeleteNote({ id: user.id, email: user.email }, { orgId, role }, noteCtx)) {
+      deletable.push(note.id);
+    }
+  }
+
+  if (deletable.length === 0) throw appError("You don't have permission to delete any of the selected notes");
+
+  await db.note.deleteMany({ where: { id: { in: deletable } } });
+
+  await writeAuditLog({
+    action: "note.bulk_delete",
+    userId: user.id,
+    orgId,
+    metadata: { count: deletable.length, noteIds: deletable },
+  });
+
+  revalidatePath("/dashboard");
+  return { success: true, deleted: deletable.length };
 }
 
 export async function getSharedWithMe() {

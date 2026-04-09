@@ -22,15 +22,14 @@ export default async function NotePage({
     const canEdit = isAuthor;
     const canDelete = isAuthor || isAtLeast(role, Role.ADMIN);
 
-    // Load org members for the share panel (only when author + private)
-    const orgMembers =
-      isAuthor && note.visibility === "PRIVATE" && session.activeOrgId
-        ? await db.orgMember.findMany({
-            where: { orgId: session.activeOrgId },
-            include: { user: { select: { id: true, name: true, email: true } } },
-            orderBy: { joinedAt: "asc" },
-          }).then((ms) => ms.filter((m) => m.userId !== session.user.id))
-        : [];
+    // Load org members for share panel + @mention highlighting
+    const orgMembers = session.activeOrgId
+      ? await db.orgMember.findMany({
+          where: { orgId: session.activeOrgId },
+          include: { user: { select: { id: true, name: true, email: true } } },
+          orderBy: { joinedAt: "asc" },
+        }).then((ms) => ms.filter((m) => m.userId !== session.user.id))
+      : [];
 
     return (
       <NoteDetail
@@ -39,6 +38,7 @@ export default async function NotePage({
         canDelete={canDelete}
         isAuthor={isAuthor}
         orgMembers={orgMembers}
+        currentUserId={session.user.id}
       />
     );
   } catch (err) {

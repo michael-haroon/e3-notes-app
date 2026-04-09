@@ -24,6 +24,8 @@ export function VersionsView({ noteId }: { noteId: string }) {
   const [diffError, setDiffError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<number | null>(null);
   const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
+  const [restorePreview, setRestorePreview] = useState<{ version: number; diff: { contentDiff: string; titleDiff: string | null } } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState<number | null>(null);
 
   async function loadVersions() {
     setLoadError(null);
@@ -62,8 +64,30 @@ export function VersionsView({ noteId }: { noteId: string }) {
     }
   }
 
-  async function handleRestore(version: number) {
-    if (!confirm(`Restore note to v${version}? A new version will be created.`)) return;
+  async function handleRestoreClick(version: number) {
+    // Load a diff between the current (latest) version and the target version for preview
+    const latest = versions[0];
+    if (!latest || latest.version === version) {
+      // Same version — just confirm and restore
+      await confirmRestore(version);
+      return;
+    }
+    setPreviewLoading(version);
+    try {
+      const res = await fetch(`/api/notes/${noteId}/versions?from=${version}&to=${latest.version}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load preview");
+      setRestorePreview({ version, diff: data });
+    } catch {
+      // If preview fails, fall back to plain confirm
+      await confirmRestore(version);
+    } finally {
+      setPreviewLoading(null);
+    }
+  }
+
+  async function confirmRestore(version: number) {
+    setRestorePreview(null);
     setRestoring(version);
     try {
       const res = await fetch(`/api/notes/${noteId}/versions`, {
@@ -119,6 +143,45 @@ export function VersionsView({ noteId }: { noteId: string }) {
 
   return (
     <div className="space-y-5">
+      {/* Restore preview modal */}
+      {restorePreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-surface border border-[var(--border-color)] rounded-card shadow-card w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="px-5 py-4 border-b border-[var(--border-color)] flex items-center justify-between">
+              <h2 className="font-display text-[15px] font-semibold text-ink">
+                Preview restore to v{restorePreview.version}
+              </h2>
+              <button onClick={() => setRestorePreview(null)} className="text-muted hover:text-ink text-lg leading-none">×</button>
+            </div>
+            <div className="p-5 overflow-y-auto flex-1 space-y-4">
+              <p className="text-[13px] text-dim">Differences between v{restorePreview.version} (target) and current version:</p>
+              {restorePreview.diff.titleDiff && (
+                <div>
+                  <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-1.5">Title</p>
+                  <DiffViewer diff={restorePreview.diff.titleDiff} />
+                </div>
+              )}
+              <div>
+                <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-1.5">Content</p>
+                <DiffViewer diff={restorePreview.diff.contentDiff} />
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-[var(--border-color)] flex gap-2 justify-end">
+              <button onClick={() => setRestorePreview(null)} className="ui-btn-secondary px-4 py-2 text-[13px]">
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmRestore(restorePreview.version)}
+                disabled={!!restoring}
+                className="ui-btn-primary px-4 py-2 text-[13px] disabled:opacity-50"
+              >
+                {restoring ? "Restoring…" : `Restore to v${restorePreview.version}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {restoreMsg && (
         <div className="bg-ok-soft border border-[var(--green-soft)] text-ok rounded-card p-3.5 flex items-center justify-between text-[13px]">
           <div className="flex items-center gap-2">
@@ -207,11 +270,11 @@ export function VersionsView({ noteId }: { noteId: string }) {
                   <span>{new Date(v.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                 </div>
                 <button
-                  onClick={() => handleRestore(v.version)}
-                  disabled={!!restoring}
+                  onClick={() => handleRestoreClick(v.version)}
+                  disabled={!!restoring || previewLoading === v.version}
                   className="text-[11px] px-2.5 py-1 border border-[var(--border-color)] text-dim rounded-[6px] hover:bg-subtle hover:text-ink disabled:opacity-50 transition-colors whitespace-nowrap"
                 >
-                  {restoring === v.version ? "Restoring…" : "Restore"}
+                  {restoring === v.version || previewLoading === v.version ? "Loading…" : "Restore"}
                 </button>
               </div>
             </div>

@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Visibility } from "@/generated/prisma/enums";
 import { NoteList, type NoteListNote } from "@/components/notes/NoteList";
+import { bulkDeleteNotes } from "@/actions/notes";
+import { getActionError } from "@/lib/action-error";
 import {
   createNotesWorkspaceSearchParams,
   DEFAULT_NOTES_WORKSPACE_FILTERS,
@@ -42,6 +45,7 @@ export function NotesWorkspace({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const urlFilters = useMemo(
     () => readNotesWorkspaceFilters(new URLSearchParams(searchParams.toString())),
     [searchParams]
@@ -51,6 +55,11 @@ export function NotesWorkspace({
   const [selectedAuthorId, setSelectedAuthorId] = useState(urlFilters.authorId);
   const [selectedVisibility, setSelectedVisibility] = useState<"all" | Visibility>(urlFilters.visibility);
   const [sortBy, setSortBy] = useState<SortOption>(urlFilters.sortBy);
+
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   useEffect(() => {
     setQuery(urlFilters.query);
@@ -97,6 +106,45 @@ export function NotesWorkspace({
     setSelectedAuthorId(DEFAULT_NOTES_WORKSPACE_FILTERS.authorId);
     setSelectedVisibility(DEFAULT_NOTES_WORKSPACE_FILTERS.visibility);
     setSortBy(DEFAULT_NOTES_WORKSPACE_FILTERS.sortBy);
+  }
+
+  function toggleSelectionMode() {
+    setSelectionMode((v) => !v);
+    setSelectedIds([]);
+    setBulkError(null);
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function selectAll() {
+    setSelectedIds(filteredNotes.map((n) => n.id));
+  }
+
+  function clearSelection() {
+    setSelectedIds([]);
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Delete ${selectedIds.length} note${selectedIds.length !== 1 ? "s" : ""}? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    setBulkError(null);
+    try {
+      const result = await bulkDeleteNotes(selectedIds);
+      setSelectedIds([]);
+      setSelectionMode(false);
+      router.refresh();
+      // Brief success message
+      alert(`Deleted ${result.deleted} note${result.deleted !== 1 ? "s" : ""}.`);
+    } catch (err) {
+      setBulkError(getActionError(err, "Bulk delete failed"));
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   return (
@@ -186,20 +234,67 @@ export function NotesWorkspace({
             </div>
           </div>
 
-          {hasActiveFilters && (
+          <div className="flex items-center gap-2">
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="ui-btn-secondary px-4 py-2 text-[12px]"
+              >
+                Clear filters
+              </button>
+            )}
             <button
               type="button"
-              onClick={resetFilters}
-              className="ui-btn-secondary px-4 py-2 text-[12px]"
+              onClick={toggleSelectionMode}
+              className={`ui-btn-secondary px-4 py-2 text-[12px] ${selectionMode ? "text-[var(--accent)] border-[var(--accent-soft)] bg-[var(--accent-soft)]" : ""}`}
             >
-              Clear filters
+              {selectionMode ? "Cancel selection" : "Select"}
             </button>
-          )}
+          </div>
         </div>
       </div>
 
+      {/* Bulk actions bar */}
+      {selectionMode && (
+        <div className="bg-surface border border-[var(--border-color)] rounded-card px-5 py-3 shadow-card flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <span className="text-[13px] text-ink font-medium">
+              {selectedIds.length} selected
+            </span>
+            <button type="button" onClick={selectAll} className="text-[12px] text-[var(--accent)] hover:underline">
+              Select all ({filteredNotes.length})
+            </button>
+            {selectedIds.length > 0 && (
+              <button type="button" onClick={clearSelection} className="text-[12px] text-dim hover:text-ink">
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {bulkError && (
+              <span className="text-[12px] text-bad">{bulkError}</span>
+            )}
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={selectedIds.length === 0 || bulkDeleting}
+              className="ui-btn-danger px-4 py-1.5 text-[12px] disabled:opacity-50"
+            >
+              {bulkDeleting ? "Deleting…" : `Delete ${selectedIds.length > 0 ? `(${selectedIds.length})` : ""}`}
+            </button>
+          </div>
+        </div>
+      )}
+
       {filteredNotes.length > 0 ? (
-        <NoteList notes={filteredNotes} currentUserId={currentUserId} />
+        <NoteList
+          notes={filteredNotes}
+          currentUserId={currentUserId}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+        />
       ) : (
         <div className="ui-card flex flex-col items-center justify-center px-6 py-20 text-center">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-subtle">

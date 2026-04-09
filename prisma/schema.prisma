@@ -34,6 +34,7 @@ model User {
   shares        NoteShare[]
   files         File[]
   auditLogs     AuditLog[]
+  comments      Comment[]
 
   @@map("users")
 }
@@ -45,12 +46,13 @@ model Org {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  members     OrgMember[]
-  notes       Note[]
-  tags        Tag[]
-  files       File[]
-  invites     OrgInvite[]
-  auditLogs   AuditLog[]
+  members       OrgMember[]
+  notes         Note[]
+  tags          Tag[]
+  files         File[]
+  invites       OrgInvite[]
+  auditLogs     AuditLog[]
+  noteTemplates NoteTemplate[]
 
   @@map("orgs")
 }
@@ -91,6 +93,7 @@ model Note {
   visibility   Visibility  @default(ORG)
   orgId        String
   authorId     String
+  pinnedAt     DateTime?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -101,6 +104,7 @@ model Note {
   shares       NoteShare[]
   files        File[]
   aiSummaries  AISummary[]
+  comments     Comment[]
 
   @@index([orgId])
   @@index([authorId])
@@ -216,4 +220,34 @@ model AuditLog {
   @@index([orgId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model NoteTemplate {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @default("")
+  orgId     String
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@map("note_templates")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  noteId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+
+  @@index([noteId])
+  @@map("comments")
 }

@@ -39,6 +39,7 @@ export default async function EditNotePage({
         visibility: note.visibility,
         tagIds: note.tags.map((t) => t.tagId),
         isAuthor: note.authorId === currentUserId,
+        updatedAt: note.updatedAt.toISOString(),
       }}
       orgTags={tags}
     />

@@ -148,5 +148,30 @@ export async function DELETE(
     metadata: { filename: file.filename },
   });
 
+  // If this file was attached to a note, create a version snapshot recording the deletion
+  if (file.noteId) {
+    try {
+      const note = await db.note.findUnique({ where: { id: file.noteId } });
+      if (note) {
+        const latestVersion = await db.noteVersion.findFirst({
+          where: { noteId: note.id },
+          orderBy: { version: "desc" },
+        });
+        const nextVersion = (latestVersion?.version ?? 0) + 1;
+        await db.noteVersion.create({
+          data: {
+            noteId: note.id,
+            version: nextVersion,
+            title: note.title,
+            content: note.content,
+            authorId: userId,
+          },
+        });
+      }
+    } catch {
+      // Version creation failure must not break file deletion
+    }
+  }
+
   return new NextResponse(null, { status: 204 });
 }

@@ -3,11 +3,12 @@ import { getActionError } from "@/lib/action-error";
 
 import { useState } from "react";
 import Link from "next/link";
-import { deleteNote } from "@/actions/notes";
+import { deleteNote, pinNote, unpinNote } from "@/actions/notes";
 import { useRouter } from "next/navigation";
 import { Visibility } from "@/generated/prisma/enums";
 import { FileUploader } from "@/components/notes/FileUploader";
 import { SharePanel } from "@/components/notes/SharePanel";
+import { CommentThread } from "@/components/notes/CommentThread";
 
 type Note = {
   id: string;
@@ -16,6 +17,7 @@ type Note = {
   visibility: Visibility;
   authorId: string;
   orgId: string;
+  pinnedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   author: { id: string; name: string | null; email: string };
@@ -33,21 +35,103 @@ const visTag: Record<string, string> = {
 };
 const visLabel: Record<string, string> = { PUBLIC: "Public", ORG: "Org", PRIVATE: "Private" };
 
+/** Render note content with inline image detection and @mention highlighting */
+function NoteContent({ content, orgMembers }: {
+  content: string;
+  orgMembers: { user: { name: string | null; email: string } }[];
+}) {
+  if (!content) {
+    return <span className="text-muted italic">No content yet.</span>;
+  }
+
+  const memberNames = orgMembers
+    .map((m) => m.user.name ?? m.user.email.split("@")[0])
+    .filter(Boolean);
+
+  // Split content into lines, then process each line
+  const lines = content.split("\n");
+
+  return (
+    <>
+      {lines.map((line, lineIdx) => {
+        // Check if line is a standalone image URL
+        const imageUrlMatch = line.trim().match(/^(https?:\/\/\S+\.(png|jpg|jpeg|gif|webp|svg))$/i);
+        if (imageUrlMatch) {
+          return (
+            <span key={lineIdx} className="block my-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrlMatch[1]}
+                alt="Inline image"
+                className="max-w-full max-h-80 rounded-[6px] border border-[var(--border-color)]"
+                onError={(e) => {
+                  // Fall back to showing the URL as text
+                  const span = document.createElement("span");
+                  span.textContent = line;
+                  span.className = "text-[var(--accent)] underline";
+                  (e.target as HTMLImageElement).replaceWith(span);
+                }}
+              />
+            </span>
+          );
+        }
+
+        // Process @mentions inline
+        if (memberNames.length === 0 || !line.includes("@")) {
+          return (
+            <span key={lineIdx}>
+              {line}
+              {lineIdx < lines.length - 1 && "\n"}
+            </span>
+          );
+        }
+
+        const parts: React.ReactNode[] = [];
+        let remaining = line;
+        let partIdx = 0;
+
+        for (const name of memberNames) {
+          const mentionIdx = remaining.toLowerCase().indexOf(`@${name.toLowerCase()}`);
+          if (mentionIdx === -1) continue;
+          if (mentionIdx > 0) parts.push(<span key={`${lineIdx}-pre-${partIdx++}`}>{remaining.slice(0, mentionIdx)}</span>);
+          parts.push(
+            <span key={`${lineIdx}-mention-${partIdx++}`} className="inline-flex items-center gap-0.5 bg-[var(--accent-soft)] text-[var(--accent)] px-1 py-0.5 rounded-[4px] text-[13px] font-medium">
+              @{name}
+            </span>
+          );
+          remaining = remaining.slice(mentionIdx + name.length + 1);
+        }
+        if (remaining) parts.push(<span key={`${lineIdx}-rest-${partIdx++}`}>{remaining}</span>);
+
+        return (
+          <span key={lineIdx}>
+            {parts.length > 0 ? parts : line}
+            {lineIdx < lines.length - 1 && "\n"}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
 export function NoteDetail({
   note,
   canEdit = false,
   canDelete = false,
   isAuthor = false,
   orgMembers = [],
+  currentUserId,
 }: {
   note: Note;
   canEdit?: boolean;
   canDelete?: boolean;
   isAuthor?: boolean;
   orgMembers?: { userId: string; user: { id: string; name: string | null; email: string } }[];
+  currentUserId: string;
 }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
+  const [pinning, setPinning] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [summaryResult, setSummaryResult] = useState<{
     summary: string; keyPoints: string[]; topics: string[];
@@ -55,6 +139,7 @@ export function NoteDetail({
   const [summaryId, setSummaryId] = useState<string | null>(null);
 
   const latestSummary = note.aiSummaries[0];
+  const isPinned = !!note.pinnedAt;
 
   async function handleDelete() {
     if (!confirm("Delete this note? This cannot be undone.")) return;
@@ -66,6 +151,26 @@ export function NoteDetail({
       alert(getActionError(err, "Delete failed"));
       setDeleting(false);
     }
+  }
+
+  async function handlePin() {
+    setPinning(true);
+    try {
+      if (isPinned) {
+        await unpinNote(note.id);
+      } else {
+        await pinNote(note.id);
+      }
+      router.refresh();
+    } catch (err) {
+      alert(getActionError(err, "Failed to update pin"));
+    } finally {
+      setPinning(false);
+    }
+  }
+
+  function handleExport() {
+    window.location.href = `/api/notes/${note.id}/export`;
   }
 
   async function handleSummarize() {
@@ -120,6 +225,13 @@ export function NoteDetail({
       <div className="mb-7">
         <div className="flex items-start justify-between gap-4 mb-3">
           <h1 className="font-display text-[28px] font-semibold text-ink leading-tight tracking-tight flex-1">
+            {isPinned && (
+              <span className="inline-block mr-2 text-[var(--accent)]" title="Pinned">
+                <svg className="w-5 h-5 inline-block -mt-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
+                </svg>
+              </span>
+            )}
             {note.title}
           </h1>
           <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
@@ -134,6 +246,17 @@ export function NoteDetail({
                 Edit
               </Link>
             )}
+            <button
+              onClick={handlePin}
+              disabled={pinning}
+              title={isPinned ? "Unpin note" : "Pin note"}
+              className={`ui-btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[12px] ${isPinned ? "text-[var(--accent)] border-[var(--accent-soft)] bg-[var(--accent-soft)]" : ""}`}
+            >
+              <svg className="w-3.5 h-3.5" fill={isPinned ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
+              </svg>
+              {pinning ? "…" : isPinned ? "Pinned" : "Pin"}
+            </button>
             <Link
               href={`/notes/${note.id}/versions`}
               className="ui-btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[12px]"
@@ -152,6 +275,16 @@ export function NoteDetail({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
               </svg>
               {summarizing ? "Thinking…" : "AI Summary"}
+            </button>
+            <button
+              onClick={handleExport}
+              className="ui-btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[12px]"
+              title="Export as Markdown"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              Export
             </button>
             {canDelete && (
               <button
@@ -195,14 +328,14 @@ export function NoteDetail({
 
       {/* Content */}
       <div className="bg-surface border border-[var(--border-color)] rounded-card px-7 py-6 shadow-card mb-5">
-      <div className="mb-2 flex items-center justify-between gap-3 border-b border-[var(--border-color)] pb-3">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">Body</span>
-        <span className="text-[11px] text-muted">
-          {note.content.trim() ? `${note.content.trim().split(/\s+/).length} words` : "Empty"}
-        </span>
-      </div>
+        <div className="mb-2 flex items-center justify-between gap-3 border-b border-[var(--border-color)] pb-3">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">Body</span>
+          <span className="text-[11px] text-muted">
+            {note.content.trim() ? `${note.content.trim().split(/\s+/).length} words` : "Empty"}
+          </span>
+        </div>
         <pre className="whitespace-pre-wrap font-sans text-[14px] text-ink leading-[1.75]">
-          {note.content || <span className="text-muted italic">No content yet.</span>}
+          <NoteContent content={note.content} orgMembers={orgMembers} />
         </pre>
       </div>
 
@@ -311,7 +444,12 @@ export function NoteDetail({
       )}
 
       {/* Files */}
-      <FileUploader noteId={note.id} />
+      <div className="mb-5">
+        <FileUploader noteId={note.id} />
+      </div>
+
+      {/* Comments */}
+      <CommentThread noteId={note.id} currentUserId={currentUserId} />
     </div>
   );
 }
