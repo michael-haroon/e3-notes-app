@@ -216,3 +216,11 @@ Available to ADMIN and OWNER at `/audit`. Logs:
    DATABASE_URL="postgresql://..." CLERK_SECRET_KEY="sk_live_..." \
    npx tsx scripts/import-users-to-clerk.ts
    ```
+
+## Feature Status
+
+The following features have been implemented but are **not yet noticeable or tested in production**:
+- **@mentions** — infrastructure in place, not yet visible in UI
+- **Conflict detection** — backend logic implemented, untested in production environment
+
+These will be rolled out gradually with monitoring and refinement.
